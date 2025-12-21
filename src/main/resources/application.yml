@@ -32,6 +32,10 @@ server:
       enabled: true
       force: true
 
+jwt:
+  secret: eyJhbGciOiJIUzUxMiJ9eyJzdWIiOiJ0ZXN0IiwiaWF0IjoxNzAzMjAwMDAwfQpkZXYtand0LXNlY3JldC1rZXktY2hhbmdlLXRoaXMtaW4tcHJvZHVjdGlvbi1lbnZpcm9ubWVudC1ub3ctaGVsbG8td29ybGQtand0
+  expiration: 86400000
+
 logging:
   level:
     root: INFO
