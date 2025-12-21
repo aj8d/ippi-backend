@@ -10,7 +10,7 @@ public class TextData {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false, length = 500)
+    @Column(nullable = false, length = 500, columnDefinition = "VARCHAR(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci")
     private String text;
 
     @Column(name = "created_at", nullable = false, updatable = false)
