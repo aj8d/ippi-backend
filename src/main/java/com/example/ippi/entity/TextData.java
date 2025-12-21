@@ -10,6 +10,9 @@ public class TextData {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(name = "user_id", nullable = false)
+    private Long userId;
+
     @Column(nullable = false, length = 500, columnDefinition = "VARCHAR(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci")
     private String text;
 
@@ -21,7 +24,8 @@ public class TextData {
 
     public TextData() {}
 
-    public TextData(String text, Long createdAt, Long updatedAt) {
+    public TextData(Long userId, String text, Long createdAt, Long updatedAt) {
+        this.userId = userId;
         this.text = text;
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
@@ -33,6 +37,14 @@ public class TextData {
 
     public void setId(Long id) {
         this.id = id;
+    }
+
+    public Long getUserId() {
+        return userId;
+    }
+
+    public void setUserId(Long userId) {
+        this.userId = userId;
     }
 
     public String getText() {

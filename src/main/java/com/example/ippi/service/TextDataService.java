@@ -18,6 +18,11 @@ public class TextDataService {
         return textDataRepository.findAll();
     }
 
+    // ユーザー ID でテキストデータを取得
+    public List<TextData> getTextDataByUserId(Long userId) {
+        return textDataRepository.findByUserId(userId);
+    }
+
     // ID でテキストデータを取得
     public Optional<TextData> getTextDataById(Long id) {
         return textDataRepository.findById(id);

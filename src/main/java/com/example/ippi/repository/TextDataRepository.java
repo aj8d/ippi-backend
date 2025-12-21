@@ -4,6 +4,8 @@ import com.example.ippi.entity.TextData;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
+
 @Repository
 public interface TextDataRepository extends JpaRepository<TextData, Long> {
     // JpaRepository が提供するメソッド:
@@ -11,4 +13,7 @@ public interface TextDataRepository extends JpaRepository<TextData, Long> {
     // findById(id)   - ID で検索
     // save(entity)   - 保存・更新
     // delete(entity) - 削除
+    
+    // ユーザー ID でデータを取得
+    List<TextData> findByUserId(Long userId);
 }
