@@ -1,15 +1,9 @@
 package com.example.ippi.entity;
 
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
 
 @Entity
 @Table(name = "text_data")
-@Data
-@NoArgsConstructor
-@AllArgsConstructor
 public class TextData {
 
     @Id
@@ -24,6 +18,46 @@ public class TextData {
 
     @Column(name = "updated_at")
     private Long updatedAt;
+
+    public TextData() {}
+
+    public TextData(String text, Long createdAt, Long updatedAt) {
+        this.text = text;
+        this.createdAt = createdAt;
+        this.updatedAt = updatedAt;
+    }
+
+    public Long getId() {
+        return id;
+    }
+
+    public void setId(Long id) {
+        this.id = id;
+    }
+
+    public String getText() {
+        return text;
+    }
+
+    public void setText(String text) {
+        this.text = text;
+    }
+
+    public Long getCreatedAt() {
+        return createdAt;
+    }
+
+    public void setCreatedAt(Long createdAt) {
+        this.createdAt = createdAt;
+    }
+
+    public Long getUpdatedAt() {
+        return updatedAt;
+    }
+
+    public void setUpdatedAt(Long updatedAt) {
+        this.updatedAt = updatedAt;
+    }
 
     @PrePersist
     protected void onCreate() {
