@@ -2,9 +2,11 @@ package com.example.ippi.controller;
 
 import com.example.ippi.dto.AuthRequest;
 import com.example.ippi.dto.AuthResponse;
+import com.example.ippi.dto.StatsResponse;
 import com.example.ippi.entity.User;
 import com.example.ippi.repository.UserRepository;
 import com.example.ippi.security.JwtTokenProvider;
+import com.example.ippi.service.TextDataService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -20,11 +22,14 @@ public class AuthController {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtTokenProvider jwtTokenProvider;
+    private final TextDataService textDataService;
 
-    public AuthController(UserRepository userRepository, PasswordEncoder passwordEncoder, JwtTokenProvider jwtTokenProvider) {
+    public AuthController(UserRepository userRepository, PasswordEncoder passwordEncoder, 
+                         JwtTokenProvider jwtTokenProvider, TextDataService textDataService) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtTokenProvider = jwtTokenProvider;
+        this.textDataService = textDataService;
     }
 
     @PostMapping("/register")
@@ -88,5 +93,19 @@ public class AuthController {
         }
 
         return ResponseEntity.ok(new AuthResponse(null, user.getId(), user.getEmail(), user.getName()));
+    }
+
+    @GetMapping("/stats")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<?> getStats(Principal principal) {
+        String email = principal.getName();
+        User user = userRepository.findByEmail(email).orElse(null);
+
+        if (user == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("ユーザーが見つかりません");
+        }
+
+        // 過去 365 日間の日別集計を取得
+        return ResponseEntity.ok(new StatsResponse(textDataService.getUserStatsForYear(user.getId())));
     }
 }

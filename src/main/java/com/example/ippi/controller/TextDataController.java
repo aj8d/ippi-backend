@@ -11,6 +11,8 @@ import org.springframework.web.bind.annotation.*;
 import java.security.Principal;
 import java.util.List;
 import java.util.Optional;
+import java.util.Map;
+import java.util.HashMap;
 
 @RestController
 @RequestMapping("/text-data")
@@ -106,6 +108,79 @@ public class TextDataController {
         if (existing.isPresent() && existing.get().getUserId().equals(userId)) {
             textDataService.deleteTextData(id);
             return ResponseEntity.noContent().build();
+        }
+        return ResponseEntity.notFound().build();
+    }
+
+    // POST: タイマーを開始
+    @PostMapping("/{id}/start-timer")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<TextData> startTimer(@PathVariable Long id, Principal principal) {
+        String email = principal.getName();
+        Long userId = userRepository.findByEmail(email)
+                .map(user -> user.getId())
+                .orElse(null);
+        
+        Optional<TextData> existing = textDataService.getTextDataById(id);
+        if (existing.isPresent() && existing.get().getUserId().equals(userId)) {
+            TextData data = existing.get();
+            data.setTimerStartedAt(System.currentTimeMillis());
+            data.setTimerRunning(true);
+            TextData updatedData = textDataService.saveTextData(data);
+            return ResponseEntity.ok(updatedData);
+        }
+        return ResponseEntity.notFound().build();
+    }
+
+    // PUT: タイマーを停止して経過時間を保存
+    @PutMapping("/{id}/stop-timer")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<TextData> stopTimer(@PathVariable Long id, Principal principal) {
+        String email = principal.getName();
+        Long userId = userRepository.findByEmail(email)
+                .map(user -> user.getId())
+                .orElse(null);
+        
+        Optional<TextData> existing = textDataService.getTextDataById(id);
+        if (existing.isPresent() && existing.get().getUserId().equals(userId)) {
+            TextData data = existing.get();
+            if (data.getTimerRunning() && data.getTimerStartedAt() != null) {
+                long elapsedSeconds = (System.currentTimeMillis() - data.getTimerStartedAt()) / 1000;
+                data.setTimerSeconds(data.getTimerSeconds() + elapsedSeconds);
+                data.setTimerRunning(false);
+                data.setTimerStartedAt(null);
+            }
+            TextData updatedData = textDataService.saveTextData(data);
+            return ResponseEntity.ok(updatedData);
+        }
+        return ResponseEntity.notFound().build();
+    }
+
+    // GET: タイマーの状態を確認（バックグラウンド復帰時用）
+    @GetMapping("/{id}/timer-status")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<Map<String, Object>> getTimerStatus(@PathVariable Long id, Principal principal) {
+        String email = principal.getName();
+        Long userId = userRepository.findByEmail(email)
+                .map(user -> user.getId())
+                .orElse(null);
+        
+        Optional<TextData> existing = textDataService.getTextDataById(id);
+        if (existing.isPresent() && existing.get().getUserId().equals(userId)) {
+            TextData data = existing.get();
+            Map<String, Object> status = new HashMap<>();
+            status.put("id", data.getId());
+            status.put("timerRunning", data.getTimerRunning());
+            
+            if (data.getTimerRunning() && data.getTimerStartedAt() != null) {
+                // 実行中の場合、現在の経過秒数を計算して返す
+                long elapsedSeconds = (System.currentTimeMillis() - data.getTimerStartedAt()) / 1000;
+                status.put("elapsedSeconds", elapsedSeconds);
+            } else {
+                // 停止中の場合、保存されたタイマー秒数を返す
+                status.put("elapsedSeconds", data.getTimerSeconds());
+            }
+            return ResponseEntity.ok(status);
         }
         return ResponseEntity.notFound().build();
     }
