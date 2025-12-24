@@ -19,6 +19,12 @@ public class User {
     @Column(nullable = false)
     private String name;
 
+    @Column(name = "google_id")
+    private String googleId;
+
+    @Column(name = "google_email")
+    private String googleEmail;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Long createdAt;
 
@@ -31,6 +37,16 @@ public class User {
         this.email = email;
         this.password = password;
         this.name = name;
+        this.createdAt = createdAt;
+        this.updatedAt = updatedAt;
+    }
+
+    public User(String email, String name, String googleId, String googleEmail, Long createdAt, Long updatedAt) {
+        this.email = email;
+        this.password = "";
+        this.name = name;
+        this.googleId = googleId;
+        this.googleEmail = googleEmail;
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
     }
@@ -81,5 +97,21 @@ public class User {
 
     public void setUpdatedAt(Long updatedAt) {
         this.updatedAt = updatedAt;
+    }
+
+    public String getGoogleId() {
+        return googleId;
+    }
+
+    public void setGoogleId(String googleId) {
+        this.googleId = googleId;
+    }
+
+    public String getGoogleEmail() {
+        return googleEmail;
+    }
+
+    public void setGoogleEmail(String googleEmail) {
+        this.googleEmail = googleEmail;
     }
 }
