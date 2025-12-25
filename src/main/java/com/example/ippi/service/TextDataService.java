@@ -52,7 +52,10 @@ public class TextDataService {
             // 過去 365 日以内のデータのみ集計
             if (!date.isBefore(oneYearAgo) && !date.isAfter(today)) {
                 long timerSeconds = data.getTimerSeconds() != null ? data.getTimerSeconds() : 0L;
-                statsMap.put(date, statsMap.get(date) + timerSeconds);
+                // タイマー秒数が負の値でないことを確認
+                if (timerSeconds > 0) {
+                    statsMap.put(date, statsMap.get(date) + timerSeconds);
+                }
             }
         }
         
@@ -60,7 +63,9 @@ public class TextDataService {
         return statsMap.entrySet().stream()
                 .sorted(Map.Entry.comparingByKey())
                 .map(entry -> {
-                    int minutes = Math.toIntExact(entry.getValue() / 60);
+                    // 秒を分に変換（小数点以下は切り上げ）
+                    long seconds = entry.getValue();
+                    int minutes = Math.toIntExact((seconds + 59) / 60);
                     return new DailyStats(entry.getKey().toString(), minutes);
                 })
                 .collect(Collectors.toList());

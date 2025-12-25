@@ -145,8 +145,10 @@ public class TextDataController {
         if (existing.isPresent() && existing.get().getUserId().equals(userId)) {
             TextData data = existing.get();
             if (data.getTimerRunning() && data.getTimerStartedAt() != null) {
-                long elapsedSeconds = (System.currentTimeMillis() - data.getTimerStartedAt()) / 1000;
-                data.setTimerSeconds(data.getTimerSeconds() + elapsedSeconds);
+                long elapsedMillis = System.currentTimeMillis() - data.getTimerStartedAt();
+                long elapsedSeconds = elapsedMillis / 1000;
+                // タイマー秒数は上書き（累積しない）
+                data.setTimerSeconds(elapsedSeconds);
                 data.setTimerRunning(false);
                 data.setTimerStartedAt(null);
             }

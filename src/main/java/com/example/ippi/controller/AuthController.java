@@ -4,6 +4,7 @@ import com.example.ippi.dto.AuthRequest;
 import com.example.ippi.dto.AuthResponse;
 import com.example.ippi.dto.GoogleLoginRequest;
 import com.example.ippi.dto.StatsResponse;
+import com.example.ippi.entity.TextData;
 import com.example.ippi.entity.User;
 import com.example.ippi.repository.UserRepository;
 import com.example.ippi.security.GoogleTokenVerifier;
@@ -18,6 +19,8 @@ import org.springframework.web.bind.annotation.*;
 import java.io.IOException;
 import java.security.GeneralSecurityException;
 import java.security.Principal;
+import java.util.List;
+import java.util.List;
 import java.util.Optional;
 
 @RestController
@@ -30,7 +33,7 @@ public class AuthController {
     private final TextDataService textDataService;
     private final GoogleTokenVerifier googleTokenVerifier;
 
-    public AuthController(UserRepository userRepository, PasswordEncoder passwordEncoder, 
+    public AuthController(UserRepository userRepository, PasswordEncoder passwordEncoder,
                          JwtTokenProvider jwtTokenProvider, TextDataService textDataService,
                          GoogleTokenVerifier googleTokenVerifier) {
         this.userRepository = userRepository;
@@ -121,7 +124,7 @@ public class AuthController {
     public ResponseEntity<?> googleLogin(@RequestBody GoogleLoginRequest request) {
         try {
             // Google ID Token を検証
-            com.google.api.client.googleapis.auth.oauth2.GoogleIdToken.Payload payload = 
+            com.google.api.client.googleapis.auth.oauth2.GoogleIdToken.Payload payload =
                 googleTokenVerifier.getPayload(request.getIdToken());
 
             // ペイロードからユーザー情報を抽出
@@ -164,5 +167,20 @@ public class AuthController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body("予期しないエラーが発生しました: " + e.getMessage());
         }
+    }
+
+    @GetMapping("/debug/text-data")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<?> getDebugTextData(Principal principal) {
+        String email = principal.getName();
+        User user = userRepository.findByEmail(email).orElse(null);
+
+        if (user == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("ユーザーが見つかりません");
+        }
+
+        // すべてのテキストデータを取得（デバッグ用）
+        List<TextData> textDataList = textDataService.getTextDataByUserId(user.getId());
+        return ResponseEntity.ok(textDataList);
     }
 }
