@@ -51,8 +51,13 @@ server:
       force: true
 
 jwt:
-  secret: ${JWT_SECRET:eyJhbGciOiJIUzUxMiJ9eyJzdWIiOiJ0ZXN0IiwiaWF0IjoxNzAzMjAwMDAwfQpkZXYtand0LXNlY3JldC1rZXktY2hhbmdlLXRoaXMtaW4tcHJvZHVjdGlvbi1lbnZpcm9ubWVudC1ub3ctaGVsbG8td29ybGQtand0}
+  secret: ${JWT_SECRET:dev-jwt-secret-placeholder}
   expiration: 86400000
+
+cloudinary:
+  cloud-name: ${CLOUDINARY_CLOUD_NAME}
+  api-key: ${CLOUDINARY_API_KEY}
+  api-secret: ${CLOUDINARY_API_SECRET}
 
 logging:
   level:

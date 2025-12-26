@@ -10,17 +10,20 @@ import com.example.ippi.repository.UserRepository;
 import com.example.ippi.security.GoogleTokenVerifier;
 import com.example.ippi.security.JwtTokenProvider;
 import com.example.ippi.service.TextDataService;
+import com.cloudinary.Cloudinary;
+import com.cloudinary.utils.ObjectUtils;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.security.GeneralSecurityException;
 import java.security.Principal;
 import java.util.List;
-import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 @RestController
@@ -32,15 +35,17 @@ public class AuthController {
     private final JwtTokenProvider jwtTokenProvider;
     private final TextDataService textDataService;
     private final GoogleTokenVerifier googleTokenVerifier;
+    private final Cloudinary cloudinary;
 
     public AuthController(UserRepository userRepository, PasswordEncoder passwordEncoder,
                          JwtTokenProvider jwtTokenProvider, TextDataService textDataService,
-                         GoogleTokenVerifier googleTokenVerifier) {
+                         GoogleTokenVerifier googleTokenVerifier, Cloudinary cloudinary) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtTokenProvider = jwtTokenProvider;
         this.textDataService = textDataService;
         this.googleTokenVerifier = googleTokenVerifier;
+        this.cloudinary = cloudinary;
     }
 
     @PostMapping("/register")
@@ -90,7 +95,7 @@ public class AuthController {
         String token = jwtTokenProvider.generateToken(user.getEmail());
 
         // レスポンス返却
-        return ResponseEntity.ok(new AuthResponse(token, user.getId(), user.getEmail(), user.getName()));
+        return ResponseEntity.ok(new AuthResponse(token, user.getId(), user.getEmail(), user.getName(), user.getProfileImageUrl(), user.getDescription()));
     }
 
     @GetMapping("/profile")
@@ -103,7 +108,7 @@ public class AuthController {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body("ユーザーが見つかりません");
         }
 
-        return ResponseEntity.ok(new AuthResponse(null, user.getId(), user.getEmail(), user.getName()));
+        return ResponseEntity.ok(new AuthResponse(null, user.getId(), user.getEmail(), user.getName(), user.getProfileImageUrl(), user.getDescription()));
     }
 
     @GetMapping("/stats")
@@ -155,7 +160,7 @@ public class AuthController {
             String token = jwtTokenProvider.generateToken(user.getEmail());
 
             // レスポンス返却
-            return ResponseEntity.ok(new AuthResponse(token, user.getId(), user.getEmail(), user.getName()));
+            return ResponseEntity.ok(new AuthResponse(token, user.getId(), user.getEmail(), user.getName(), user.getProfileImageUrl(), user.getDescription()));
 
         } catch (IOException e) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
@@ -182,5 +187,77 @@ public class AuthController {
         // すべてのテキストデータを取得（デバッグ用）
         List<TextData> textDataList = textDataService.getTextDataByUserId(user.getId());
         return ResponseEntity.ok(textDataList);
+    }
+
+    @PostMapping("/upload-profile-image")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<?> uploadProfileImage(
+            @RequestParam("file") MultipartFile file,
+            Principal principal) {
+        try {
+            String email = principal.getName();
+            User user = userRepository.findByEmail(email).orElse(null);
+
+            if (user == null) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body("ユーザーが見つかりません");
+            }
+
+            if (file.isEmpty()) {
+                return ResponseEntity.badRequest().body("ファイルが選択されていません");
+            }
+
+            // Cloudinary にアップロード（プライベート）
+            Map uploadResult = cloudinary.uploader().upload(file.getBytes(),
+                ObjectUtils.asMap(
+                    "folder", "ippi-profiles",
+                    "public_id", "user_" + user.getId(),
+                    "type", "private",
+                    "overwrite", true,
+                    "resource_type", "auto"
+                ));
+
+            String imageUrl = (String) uploadResult.get("secure_url");
+
+            // ユーザーに画像URL を保存
+            user.setProfileImageUrl(imageUrl);
+            user.setUpdatedAt(System.currentTimeMillis());
+            userRepository.save(user);
+
+            return ResponseEntity.ok(new AuthResponse(null, user.getId(), user.getEmail(), user.getName(), imageUrl));
+        } catch (IOException e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("画像アップロードに失敗しました: " + e.getMessage());
+        }
+    }
+
+    @PostMapping("/update-profile")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<?> updateProfile(
+            @RequestBody AuthResponse updateData,
+            Principal principal) {
+        try {
+            String email = principal.getName();
+            User user = userRepository.findByEmail(email).orElse(null);
+
+            if (user == null) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body("ユーザーが見つかりません");
+            }
+
+            // 名前と説明を更新
+            if (updateData.getName() != null && !updateData.getName().isEmpty()) {
+                user.setName(updateData.getName());
+            }
+            if (updateData.getDescription() != null) {
+                user.setDescription(updateData.getDescription());
+            }
+
+            user.setUpdatedAt(System.currentTimeMillis());
+            userRepository.save(user);
+
+            return ResponseEntity.ok(new AuthResponse(null, user.getId(), user.getEmail(), user.getName(), user.getProfileImageUrl(), user.getDescription()));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("プロフィール更新に失敗しました: " + e.getMessage());
+        }
     }
 }

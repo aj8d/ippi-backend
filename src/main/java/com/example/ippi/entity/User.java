@@ -31,6 +31,12 @@ public class User {
     @Column(name = "updated_at")
     private Long updatedAt;
 
+    @Column(name = "profile_image_url", length = 500)
+    private String profileImageUrl;
+
+    @Column(name = "description", length = 500)
+    private String description;
+
     public User() {}
 
     public User(String email, String password, String name, Long createdAt, Long updatedAt) {
@@ -113,5 +119,21 @@ public class User {
 
     public void setGoogleEmail(String googleEmail) {
         this.googleEmail = googleEmail;
+    }
+
+    public String getProfileImageUrl() {
+        return profileImageUrl;
+    }
+
+    public void setProfileImageUrl(String profileImageUrl) {
+        this.profileImageUrl = profileImageUrl;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
     }
 }
