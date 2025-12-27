@@ -3,12 +3,19 @@ package com.example.ippi.dto;
 public class AuthRequest {
     private String email;
     private String password;
+    private String customId;
 
     public AuthRequest() {}
 
     public AuthRequest(String email, String password) {
         this.email = email;
         this.password = password;
+    }
+
+    public AuthRequest(String email, String password, String customId) {
+        this.email = email;
+        this.password = password;
+        this.customId = customId;
     }
 
     public String getEmail() {
@@ -25,5 +32,13 @@ public class AuthRequest {
 
     public void setPassword(String password) {
         this.password = password;
+    }
+
+    public String getCustomId() {
+        return customId;
+    }
+
+    public void setCustomId(String customId) {
+        this.customId = customId;
     }
 }

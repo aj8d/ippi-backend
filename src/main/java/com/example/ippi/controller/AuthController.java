@@ -56,11 +56,24 @@ public class AuthController {
                     .body("このメールアドレスは既に登録されています");
         }
 
+        // customId 重複チェック
+        if (request.getCustomId() != null && userRepository.findByCustomId(request.getCustomId()).isPresent()) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body("このIDは既に使用されています");
+        }
+
+        // customId が必須
+        if (request.getCustomId() == null || request.getCustomId().trim().isEmpty()) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body("IDは必須です");
+        }
+
         // 新規ユーザーを作成
         User user = new User();
         user.setEmail(request.getEmail());
         user.setPassword(passwordEncoder.encode(request.getPassword()));
         user.setName(request.getEmail().split("@")[0]);
+        user.setCustomId(request.getCustomId().trim());
         user.setCreatedAt(System.currentTimeMillis());
         user.setUpdatedAt(System.currentTimeMillis());
 
@@ -71,7 +84,7 @@ public class AuthController {
         String token = jwtTokenProvider.generateToken(savedUser.getEmail());
 
         // レスポンス返却
-        return ResponseEntity.ok(new AuthResponse(token, savedUser.getId(), savedUser.getEmail(), savedUser.getName()));
+        return ResponseEntity.ok(new AuthResponse(token, savedUser.getId(), savedUser.getEmail(), savedUser.getName(), savedUser.getProfileImageUrl(), savedUser.getDescription(), savedUser.getCustomId()));
     }
 
     @PostMapping("/login")
@@ -95,7 +108,7 @@ public class AuthController {
         String token = jwtTokenProvider.generateToken(user.getEmail());
 
         // レスポンス返却
-        return ResponseEntity.ok(new AuthResponse(token, user.getId(), user.getEmail(), user.getName(), user.getProfileImageUrl(), user.getDescription()));
+        return ResponseEntity.ok(new AuthResponse(token, user.getId(), user.getEmail(), user.getName(), user.getProfileImageUrl(), user.getDescription(), user.getCustomId()));
     }
 
     @GetMapping("/profile")
@@ -108,7 +121,33 @@ public class AuthController {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body("ユーザーが見つかりません");
         }
 
-        return ResponseEntity.ok(new AuthResponse(null, user.getId(), user.getEmail(), user.getName(), user.getProfileImageUrl(), user.getDescription()));
+        return ResponseEntity.ok(new AuthResponse(null, user.getId(), user.getEmail(), user.getName(), user.getProfileImageUrl(), user.getDescription(), user.getCustomId()));
+    }
+
+    @GetMapping("/profile/{id}")
+    public ResponseEntity<?> getProfileById(@PathVariable String id) {
+        // customId で検索
+        User user = userRepository.findByCustomId(id).orElse(null);
+
+        if (user == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("ユーザーが見つかりません");
+        }
+
+        // プロフィール情報を返却
+        return ResponseEntity.ok(new AuthResponse(null, user.getId(), null, user.getName(), user.getProfileImageUrl(), user.getDescription(), user.getCustomId()));
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<?> getUserProfile(@PathVariable String id) {
+        // customId で検索
+        User user = userRepository.findByCustomId(id).orElse(null);
+
+        if (user == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("ユーザーが見つかりません");
+        }
+
+        // プロフィール情報を返却
+        return ResponseEntity.ok(new AuthResponse(null, user.getId(), null, user.getName(), user.getProfileImageUrl(), user.getDescription(), user.getCustomId()));
     }
 
     @GetMapping("/stats")
@@ -151,7 +190,8 @@ public class AuthController {
                     user = userRepository.save(user);
                 }
             } else {
-                // 新規ユーザーを作成
+                // 新規ユーザーを作成（Google では customId が必須なので、Google ID から生成する）
+                // または、Google ユーザーは後で customId を設定する必要がある
                 user = new User(email, name, googleId, email, System.currentTimeMillis(), System.currentTimeMillis());
                 user = userRepository.save(user);
             }
@@ -160,7 +200,7 @@ public class AuthController {
             String token = jwtTokenProvider.generateToken(user.getEmail());
 
             // レスポンス返却
-            return ResponseEntity.ok(new AuthResponse(token, user.getId(), user.getEmail(), user.getName(), user.getProfileImageUrl(), user.getDescription()));
+            return ResponseEntity.ok(new AuthResponse(token, user.getId(), user.getEmail(), user.getName(), user.getProfileImageUrl(), user.getDescription(), user.getCustomId()));
 
         } catch (IOException e) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
@@ -223,7 +263,7 @@ public class AuthController {
             user.setUpdatedAt(System.currentTimeMillis());
             userRepository.save(user);
 
-            return ResponseEntity.ok(new AuthResponse(null, user.getId(), user.getEmail(), user.getName(), imageUrl));
+            return ResponseEntity.ok(new AuthResponse(null, user.getId(), user.getEmail(), user.getName(), imageUrl, user.getDescription(), user.getCustomId()));
         } catch (IOException e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body("画像アップロードに失敗しました: " + e.getMessage());
@@ -243,6 +283,19 @@ public class AuthController {
                 return ResponseEntity.status(HttpStatus.NOT_FOUND).body("ユーザーが見つかりません");
             }
 
+            // customId の更新処理
+            if (updateData.getCustomId() != null && !updateData.getCustomId().trim().isEmpty()) {
+                String newCustomId = updateData.getCustomId().trim();
+                // 新しい customId が現在の customId と異なる場合のみ重複チェック
+                if (!newCustomId.equals(user.getCustomId())) {
+                    if (userRepository.findByCustomId(newCustomId).isPresent()) {
+                        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                                .body("このIDは既に使用されています");
+                    }
+                }
+                user.setCustomId(newCustomId);
+            }
+
             // 名前と説明を更新
             if (updateData.getName() != null && !updateData.getName().isEmpty()) {
                 user.setName(updateData.getName());
@@ -254,7 +307,7 @@ public class AuthController {
             user.setUpdatedAt(System.currentTimeMillis());
             userRepository.save(user);
 
-            return ResponseEntity.ok(new AuthResponse(null, user.getId(), user.getEmail(), user.getName(), user.getProfileImageUrl(), user.getDescription()));
+            return ResponseEntity.ok(new AuthResponse(null, user.getId(), user.getEmail(), user.getName(), user.getProfileImageUrl(), user.getDescription(), user.getCustomId()));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body("プロフィール更新に失敗しました: " + e.getMessage());

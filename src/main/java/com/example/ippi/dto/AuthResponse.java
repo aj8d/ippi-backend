@@ -7,6 +7,7 @@ public class AuthResponse {
     private String name;
     private String profileImageUrl;
     private String description;
+    private String customId;
 
     public AuthResponse() {}
 
@@ -32,6 +33,16 @@ public class AuthResponse {
         this.name = name;
         this.profileImageUrl = profileImageUrl;
         this.description = description;
+    }
+
+    public AuthResponse(String token, Long userId, String email, String name, String profileImageUrl, String description, String customId) {
+        this.token = token;
+        this.userId = userId;
+        this.email = email;
+        this.name = name;
+        this.profileImageUrl = profileImageUrl;
+        this.description = description;
+        this.customId = customId;
     }
 
     public String getToken() {
@@ -80,5 +91,13 @@ public class AuthResponse {
 
     public void setDescription(String description) {
         this.description = description;
+    }
+
+    public String getCustomId() {
+        return customId;
+    }
+
+    public void setCustomId(String customId) {
+        this.customId = customId;
     }
 }

@@ -37,6 +37,9 @@ public class User {
     @Column(name = "description", length = 500)
     private String description;
 
+    @Column(name = "custom_id", unique = true, length = 50)
+    private String customId;
+
     public User() {}
 
     public User(String email, String password, String name, Long createdAt, Long updatedAt) {
@@ -135,5 +138,13 @@ public class User {
 
     public void setDescription(String description) {
         this.description = description;
+    }
+
+    public String getCustomId() {
+        return customId;
+    }
+
+    public void setCustomId(String customId) {
+        this.customId = customId;
     }
 }
