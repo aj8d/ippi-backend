@@ -27,21 +27,19 @@ public class TextDataService {
         return textDataRepository.findByUserId(userId);
     }
 
-    // ユーザーの過去 365 日間の日別集計を取得（タイマー秒数）
+    // ユーザーのすべての日別集計を取得（タイマー秒数）
     public List<DailyStats> getUserStatsForYear(Long userId) {
         List<TextData> userTextData = getTextDataByUserId(userId);
         
-        // 現在の日付から過去 365 日間を計算
-        LocalDate today = LocalDate.now();
-        LocalDate oneYearAgo = today.minusDays(364);
+        if (userTextData.isEmpty()) {
+            return new ArrayList<>();
+        }
         
         // createdAt のタイムスタンプを LocalDate に変換してタイマー秒数を集計
         Map<LocalDate, Long> statsMap = new HashMap<>();
         
-        // 過去 365 日間のすべての日付を初期化（0 秒）
-        for (LocalDate date = oneYearAgo; !date.isAfter(today); date = date.plusDays(1)) {
-            statsMap.put(date, 0L);
-        }
+        LocalDate minDate = null;
+        LocalDate maxDate = null;
         
         // ユーザーのテキストデータのタイマー秒数を集計
         for (TextData data : userTextData) {
@@ -49,14 +47,30 @@ public class TextDataService {
                     .atZone(ZoneId.systemDefault())
                     .toLocalDate();
             
-            // 過去 365 日以内のデータのみ集計
-            if (!date.isBefore(oneYearAgo) && !date.isAfter(today)) {
-                long timerSeconds = data.getTimerSeconds() != null ? data.getTimerSeconds() : 0L;
-                // タイマー秒数が負の値でないことを確認
-                if (timerSeconds > 0) {
-                    statsMap.put(date, statsMap.get(date) + timerSeconds);
+            long timerSeconds = data.getTimerSeconds() != null ? data.getTimerSeconds() : 0L;
+            
+            // タイマー秒数が正の値のみ集計
+            if (timerSeconds > 0) {
+                statsMap.put(date, statsMap.getOrDefault(date, 0L) + timerSeconds);
+                
+                // 最早日と最新日を追跡
+                if (minDate == null || date.isBefore(minDate)) {
+                    minDate = date;
+                }
+                if (maxDate == null || date.isAfter(maxDate)) {
+                    maxDate = date;
                 }
             }
+        }
+        
+        // データがない場合
+        if (minDate == null || maxDate == null) {
+            return new ArrayList<>();
+        }
+        
+        // すべての日付を初期化（0 秒）
+        for (LocalDate date = minDate; !date.isAfter(maxDate); date = date.plusDays(1)) {
+            statsMap.putIfAbsent(date, 0L);
         }
         
         // LocalDate でソートして DailyStats のリストに変換（秒をINTEGER（分）に変換）
