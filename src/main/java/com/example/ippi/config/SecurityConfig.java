@@ -43,6 +43,8 @@ public class SecurityConfig {
                         .requestMatchers("POST", "/auth/register", "/auth/login").permitAll()
                         .requestMatchers("GET", "/auth/profile").authenticated()
                         .requestMatchers("/text-data/**").authenticated()
+                        .requestMatchers("/widgets/**").authenticated()   // 🆕 ウィジェットAPI（コンテキストパスが/apiなので/api不要）
+                        .requestMatchers("/images/**").authenticated()    // 🆕 画像API
                         .anyRequest().permitAll()
                 )
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
