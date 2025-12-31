@@ -50,6 +50,9 @@ public class TextDataController {
     @Autowired
     private ActivityService activityService;
 
+    @Autowired
+    private com.example.ippi.service.UserStatsService userStatsService;
+
     // GET: ログインユーザーのテキストデータを取得
     @GetMapping
     @PreAuthorize("isAuthenticated()")
@@ -295,7 +298,12 @@ public class TextDataController {
         );
         
         // ========================================
-        // 4. アクティビティを作成（フィード用）
+        // 4. ユーザー統計を更新
+        // ========================================
+        userStatsService.recordWorkSession(user, request.getDate(), request.getTimerSeconds());
+        
+        // ========================================
+        // 5. アクティビティを作成（フィード用）
         // ========================================
         // 作業時間を分に変換してアクティビティを作成
         int minutes = (int) (request.getTimerSeconds() / 60);
