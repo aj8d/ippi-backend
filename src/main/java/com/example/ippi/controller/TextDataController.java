@@ -1,8 +1,10 @@
 package com.example.ippi.controller;
 
 import com.example.ippi.entity.TextData;
+import com.example.ippi.entity.User;
 import com.example.ippi.dto.WorkSessionRequest;
 import com.example.ippi.service.TextDataService;
+import com.example.ippi.service.ActivityService;
 import com.example.ippi.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -44,6 +46,9 @@ public class TextDataController {
     
     @Autowired
     private UserRepository userRepository;
+    
+    @Autowired
+    private ActivityService activityService;
 
     // GET: ログインユーザーのテキストデータを取得
     @GetMapping
@@ -254,15 +259,16 @@ public class TextDataController {
         // getName()でログインユーザーのメールアドレスを取得
         String email = principal.getName();
         
-        // メールアドレスからユーザーIDを取得
-        Long userId = userRepository.findByEmail(email)
-                .map(user -> user.getId())
-                .orElse(null);
+        // メールアドレスからユーザーを取得
+        Optional<User> userOpt = userRepository.findByEmail(email);
         
         // ユーザーが見つからない場合はエラー
-        if (userId == null) {
+        if (userOpt.isEmpty()) {
             return ResponseEntity.badRequest().build();
         }
+        
+        User user = userOpt.get();
+        Long userId = user.getId();
         
         // ========================================
         // 2. バリデーション（入力値チェック）
@@ -287,6 +293,15 @@ public class TextDataController {
                 request.getDate(),
                 request.getTimerSeconds()
         );
+        
+        // ========================================
+        // 4. アクティビティを作成（フィード用）
+        // ========================================
+        // 作業時間を分に変換してアクティビティを作成
+        int minutes = (int) (request.getTimerSeconds() / 60);
+        if (minutes > 0) {
+            activityService.createWorkCompletedActivity(user, minutes);
+        }
         
         // 保存されたデータを返す
         return ResponseEntity.ok(savedData);
