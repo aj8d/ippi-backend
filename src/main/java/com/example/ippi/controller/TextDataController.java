@@ -1,6 +1,7 @@
 package com.example.ippi.controller;
 
 import com.example.ippi.entity.TextData;
+import com.example.ippi.dto.WorkSessionRequest;
 import com.example.ippi.service.TextDataService;
 import com.example.ippi.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -14,6 +15,26 @@ import java.util.Optional;
 import java.util.Map;
 import java.util.HashMap;
 
+/**
+ * TextDataController - テキストデータと作業時間のREST APIコントローラー
+ * 
+ * 📚 このクラスの役割：
+ * HTTPリクエストを受け取り、適切なサービスを呼び出してレスポンスを返す。
+ * REST APIのエンドポイント（URL）を定義している。
+ * 
+ * 💡 アノテーションの説明：
+ * - @RestController: このクラスがREST APIのコントローラーであることを示す
+ * - @RequestMapping("/text-data"): ベースURLを "/api/text-data" に設定
+ *   （/api は Spring Security の設定で追加される）
+ * 
+ * 📝 利用可能なエンドポイント：
+ * - GET    /api/text-data              - ユーザーの全データ取得
+ * - GET    /api/text-data/{id}         - 特定のデータ取得
+ * - POST   /api/text-data              - 新規作成
+ * - PUT    /api/text-data/{id}         - 更新
+ * - DELETE /api/text-data/{id}         - 削除
+ * - POST   /api/text-data/work-session - 作業セッション保存 ← 新規追加！
+ */
 @RestController
 @RequestMapping("/text-data")
 public class TextDataController {
@@ -185,5 +206,89 @@ public class TextDataController {
             return ResponseEntity.ok(status);
         }
         return ResponseEntity.notFound().build();
+    }
+
+    // ========================================
+    // 作業セッション保存エンドポイント（新規追加）
+    // ========================================
+
+    /**
+     * POST: 作業セッションの時間を保存
+     * 
+     * 📚 このエンドポイントの役割：
+     * フロントエンドのタイマーウィジェットが完了した時に呼び出される。
+     * その日の作業時間を記録し、統計データとして蓄積する。
+     * 
+     * 💡 リクエスト形式：
+     * POST /api/text-data/work-session
+     * Content-Type: application/json
+     * Authorization: Bearer {token}
+     * 
+     * {
+     *   "date": "2024-12-31",
+     *   "timerSeconds": 1500
+     * }
+     * 
+     * 💡 レスポンス：
+     * 成功時: 200 OK + 保存されたTextDataオブジェクト
+     * 失敗時: 400 Bad Request（ユーザー未認証など）
+     * 
+     * 📝 特徴：
+     * - 同じ日に複数回呼び出すと、作業時間が累積される
+     * - これにより、1日の総作業時間を正確に記録できる
+     * 
+     * @param request WorkSessionRequest（日付と作業秒数を含む）
+     * @param principal 認証情報（ログインユーザー）
+     * @return 保存されたTextData
+     */
+    @PostMapping("/work-session")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<TextData> saveWorkSession(
+            @RequestBody WorkSessionRequest request,
+            Principal principal) {
+        
+        // ========================================
+        // 1. ユーザー認証の確認
+        // ========================================
+        // 📚 Principal: Spring Securityが提供する認証情報
+        // getName()でログインユーザーのメールアドレスを取得
+        String email = principal.getName();
+        
+        // メールアドレスからユーザーIDを取得
+        Long userId = userRepository.findByEmail(email)
+                .map(user -> user.getId())
+                .orElse(null);
+        
+        // ユーザーが見つからない場合はエラー
+        if (userId == null) {
+            return ResponseEntity.badRequest().build();
+        }
+        
+        // ========================================
+        // 2. バリデーション（入力値チェック）
+        // ========================================
+        // 📚 なぜバリデーション？
+        // 不正なデータがデータベースに保存されるのを防ぐ
+        if (request.getDate() == null || request.getTimerSeconds() == null) {
+            return ResponseEntity.badRequest().build();
+        }
+        
+        // 作業時間が0以下の場合は保存しない
+        if (request.getTimerSeconds() <= 0) {
+            return ResponseEntity.badRequest().build();
+        }
+        
+        // ========================================
+        // 3. 作業セッションを保存
+        // ========================================
+        // サービス層に処理を委譲
+        TextData savedData = textDataService.saveWorkSession(
+                userId,
+                request.getDate(),
+                request.getTimerSeconds()
+        );
+        
+        // 保存されたデータを返す
+        return ResponseEntity.ok(savedData);
     }
 }
