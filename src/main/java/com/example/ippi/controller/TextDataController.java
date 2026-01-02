@@ -2,6 +2,7 @@ package com.example.ippi.controller;
 
 import com.example.ippi.entity.TextData;
 import com.example.ippi.entity.User;
+import com.example.ippi.entity.WorkSession;
 import com.example.ippi.dto.WorkSessionRequest;
 import com.example.ippi.service.TextDataService;
 import com.example.ippi.service.ActivityService;
@@ -247,11 +248,11 @@ public class TextDataController {
      * 
      * @param request WorkSessionRequest（日付と作業秒数を含む）
      * @param principal 認証情報（ログインユーザー）
-     * @return 保存されたTextData
+     * @return 保存されたWorkSession
      */
     @PostMapping("/work-session")
     @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<TextData> saveWorkSession(
+    public ResponseEntity<WorkSession> saveWorkSession(
             @RequestBody WorkSessionRequest request,
             Principal principal) {
         
@@ -291,7 +292,7 @@ public class TextDataController {
         // 3. 作業セッションを保存
         // ========================================
         // サービス層に処理を委譲
-        TextData savedData = textDataService.saveWorkSession(
+        WorkSession savedSession = textDataService.saveWorkSession(
                 userId,
                 request.getDate(),
                 request.getTimerSeconds()
@@ -312,6 +313,6 @@ public class TextDataController {
         }
         
         // 保存されたデータを返す
-        return ResponseEntity.ok(savedData);
+        return ResponseEntity.ok(savedSession);
     }
 }
