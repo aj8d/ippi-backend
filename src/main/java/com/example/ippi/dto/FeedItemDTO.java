@@ -1,5 +1,7 @@
 package com.example.ippi.dto;
 
+import java.util.List;
+
 public class FeedItemDTO {
     private Long id;
     private Long userId;
@@ -10,6 +12,10 @@ public class FeedItemDTO {
     private String message;
     private String relatedData;
     private Long createdAt;
+    private long likeCount;
+    private boolean isLiked;
+    private long commentCount;
+    private List<CommentDTO> comments;
 
     public FeedItemDTO() {}
 
@@ -97,5 +103,37 @@ public class FeedItemDTO {
 
     public void setCreatedAt(Long createdAt) {
         this.createdAt = createdAt;
+    }
+
+    public long getLikeCount() {
+        return likeCount;
+    }
+
+    public void setLikeCount(long likeCount) {
+        this.likeCount = likeCount;
+    }
+
+    public boolean isLiked() {
+        return isLiked;
+    }
+
+    public void setLiked(boolean liked) {
+        isLiked = liked;
+    }
+
+    public long getCommentCount() {
+        return commentCount;
+    }
+
+    public void setCommentCount(long commentCount) {
+        this.commentCount = commentCount;
+    }
+
+    public List<CommentDTO> getComments() {
+        return comments;
+    }
+
+    public void setComments(List<CommentDTO> comments) {
+        this.comments = comments;
     }
 }
