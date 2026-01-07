@@ -130,13 +130,21 @@ public class TextDataController {
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<Void> deleteTextData(@PathVariable Long id, Principal principal) {
         String email = principal.getName();
-        Long userId = userRepository.findByEmail(email)
-                .map(user -> user.getId())
-                .orElse(null);
+        Optional<User> userOpt = userRepository.findByEmail(email);
         
+        if (userOpt.isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+        
+        User user = userOpt.get();
         Optional<TextData> existing = textDataService.getTextDataById(id);
-        if (existing.isPresent() && existing.get().getUserId().equals(userId)) {
+        
+        if (existing.isPresent() && existing.get().getUserId().equals(user.getId())) {
             textDataService.deleteTextData(id);
+            
+            // Todo完了の統計を更新
+            userStatsService.recordTodoCompleted(user);
+            
             return ResponseEntity.noContent().build();
         }
         return ResponseEntity.notFound().build();
@@ -307,8 +315,9 @@ public class TextDataController {
         // 5. アクティビティを作成（フィード用）
         // ========================================
         // 作業時間を分に変換してアクティビティを作成
+        // 1時間以上（3600秒以上）の作業のみフィードに投稿
         int minutes = (int) (request.getTimerSeconds() / 60);
-        if (minutes > 0) {
+        if (request.getTimerSeconds() >= 3600) {
             activityService.createWorkCompletedActivity(user, minutes);
         }
         
