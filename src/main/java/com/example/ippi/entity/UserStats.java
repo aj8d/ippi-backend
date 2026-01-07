@@ -65,6 +65,14 @@ public class UserStats {
     @Column(name = "total_timer_sessions", nullable = false)
     private Integer totalTimerSessions = 0;
 
+    // 今日のタイマー完了回数（作業セッション完了）
+    @Column(name = "daily_timer_completions", nullable = false)
+    private Integer dailyTimerCompletions = 0;
+
+    // 最後にタイマーを完了した日付（日付リセット用）
+    @Column(name = "last_completion_date")
+    private String lastCompletionDate;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Long createdAt;
 
@@ -86,6 +94,7 @@ public class UserStats {
         this.weeklyWorkSeconds = 0L;
         this.monthlyWorkSeconds = 0L;
         this.totalTimerSessions = 0;
+        this.dailyTimerCompletions = 0;
         this.createdAt = System.currentTimeMillis();
         this.updatedAt = System.currentTimeMillis();
     }
@@ -193,6 +202,22 @@ public class UserStats {
 
     public void setTotalTimerSessions(Integer totalTimerSessions) {
         this.totalTimerSessions = totalTimerSessions;
+    }
+
+    public Integer getDailyTimerCompletions() {
+        return dailyTimerCompletions;
+    }
+
+    public void setDailyTimerCompletions(Integer dailyTimerCompletions) {
+        this.dailyTimerCompletions = dailyTimerCompletions;
+    }
+
+    public String getLastCompletionDate() {
+        return lastCompletionDate;
+    }
+
+    public void setLastCompletionDate(String lastCompletionDate) {
+        this.lastCompletionDate = lastCompletionDate;
     }
 
     public Long getCreatedAt() {

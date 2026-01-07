@@ -53,7 +53,7 @@ public class UserStatsService {
         
         if (stats == null) {
             // 統計がない場合はデフォルト値を返す
-            return new UserStatsDTO(0, 0, 0, 0, 0L, 0L, 0L, 0);
+            return new UserStatsDTO(0, 0, 0, 0, 0L, 0L, 0L, 0, 0);
         }
 
         // 週次・月次リセットをチェック
@@ -67,7 +67,8 @@ public class UserStatsService {
             stats.getTotalWorkSeconds(),
             stats.getWeeklyWorkSeconds(),
             stats.getMonthlyWorkSeconds(),
-            stats.getTotalTimerSessions()
+            stats.getTotalTimerSessions(),
+            stats.getDailyTimerCompletions() != null ? stats.getDailyTimerCompletions() : 0
         );
     }
 
@@ -130,6 +131,29 @@ public class UserStatsService {
             stats.setUpdatedAt(System.currentTimeMillis());
             userStatsRepository.save(stats);
         }
+    }
+
+    /**
+     * タイマー完了時に今日のカウントを加算
+     * ポモドーロ/フローモドーロの作業セッション完了時にのみ呼び出される
+     */
+    @Transactional
+    public void recordTimerCompletion(User user) {
+        UserStats stats = getOrCreateStats(user);
+        LocalDate today = LocalDate.now();
+        String todayStr = today.format(DATE_FORMAT);
+
+        // 日付が変わっていればリセット
+        if (stats.getLastCompletionDate() == null || !stats.getLastCompletionDate().equals(todayStr)) {
+            stats.setDailyTimerCompletions(1);
+            stats.setLastCompletionDate(todayStr);
+        } else {
+            // 同じ日ならカウント加算
+            stats.setDailyTimerCompletions(stats.getDailyTimerCompletions() + 1);
+        }
+
+        stats.setUpdatedAt(System.currentTimeMillis());
+        userStatsRepository.save(stats);
     }
 
     /**

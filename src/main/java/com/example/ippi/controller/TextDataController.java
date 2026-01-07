@@ -2,6 +2,7 @@ package com.example.ippi.controller;
 
 import com.example.ippi.entity.TextData;
 import com.example.ippi.entity.User;
+import com.example.ippi.entity.UserStats;
 import com.example.ippi.entity.WorkSession;
 import com.example.ippi.dto.WorkSessionRequest;
 import com.example.ippi.service.TextDataService;
@@ -223,6 +224,28 @@ public class TextDataController {
             return ResponseEntity.ok(status);
         }
         return ResponseEntity.notFound().build();
+    }
+
+    // POST: タイマー完了を記録（今日のカウント加算）
+    @PostMapping("/timer-completion")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<Map<String, Object>> recordTimerCompletion(Principal principal) {
+        String email = principal.getName();
+        Optional<User> userOpt = userRepository.findByEmail(email);
+        
+        if (userOpt.isEmpty()) {
+            return ResponseEntity.badRequest().body(Map.of("error", "User not found"));
+        }
+        
+        User user = userOpt.get();
+        userStatsService.recordTimerCompletion(user);
+        
+        // 更新後の統計を返す
+        UserStats stats = userStatsService.getOrCreateStats(user);
+        return ResponseEntity.ok(Map.of(
+            "dailyTimerCompletions", stats.getDailyTimerCompletions(),
+            "lastCompletionDate", stats.getLastCompletionDate()
+        ));
     }
 
     // ========================================
