@@ -30,12 +30,9 @@ public class UserStatsService {
     private UserStatsRepository userStatsRepository;
 
     @Autowired
-    private ActivityService activityService;
+    private AchievementService achievementService;
 
     private static final DateTimeFormatter DATE_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd");
-    
-    // ストリーク達成時にアクティビティを作成する日数のリスト
-    private static final List<Integer> STREAK_MILESTONES = Arrays.asList(3, 7, 14, 30, 50, 100, 200, 365);
 
     /**
      * ユーザーの統計を取得（なければ作成）
@@ -104,11 +101,8 @@ public class UserStatsService {
 
         userStatsRepository.save(stats);
 
-        // ストリークマイルストーン達成時にアクティビティを作成
-        int currentStreak = stats.getCurrentStreak();
-        if (currentStreak > previousStreak && STREAK_MILESTONES.contains(currentStreak)) {
-            activityService.createStreakActivity(user, currentStreak);
-        }
+        // アチーブメント判定を実行
+        achievementService.checkAndAwardAchievements(user, stats);
     }
 
     /**
@@ -120,6 +114,9 @@ public class UserStatsService {
         stats.setCompletedTodos(stats.getCompletedTodos() + 1);
         stats.setUpdatedAt(System.currentTimeMillis());
         userStatsRepository.save(stats);
+        
+        // アチーブメント判定を実行
+        achievementService.checkAndAwardAchievements(user, stats);
     }
 
     /**
