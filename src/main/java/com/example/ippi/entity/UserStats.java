@@ -4,10 +4,6 @@ import jakarta.persistence.*;
 
 /**
  * ユーザー統計エンティティ
- * 
- * 📚 このエンティティの役割：
- * - ユーザーごとの累計統計データを保存
- * - フィードやプロフィールウィジェットで表示
  */
 @Entity
 @Table(name = "user_stats")

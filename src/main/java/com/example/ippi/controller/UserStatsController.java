@@ -14,10 +14,6 @@ import java.util.Optional;
 
 /**
  * ユーザー統計コントローラー
- * 
- * 📚 このコントローラーの役割：
- * - ユーザー統計の取得
- * - 自分の統計と他人の統計の両方に対応
  */
 @RestController
 @RequestMapping("/user-stats")

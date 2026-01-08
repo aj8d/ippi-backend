@@ -14,17 +14,7 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 /**
- * TextDataService - テキストデータと作業時間を管理するサービスクラス
- * 
- * 📚 このクラスの役割：
- * - データベースとのやり取り（CRUD操作）を行うビジネスロジック層
- * - コントローラーから呼び出され、リポジトリを使ってデータを操作
- * 
- * 💡 サービス層とは？
- * MVC（Model-View-Controller）アーキテクチャにおいて、
- * ビジネスロジック（業務処理）を担当する層。
- * コントローラー → サービス → リポジトリ → データベース
- * という流れでデータが処理される。
+ * テキストデータと作業時間を管理するサービスクラス
  */
 @Service
 public class TextDataService {
@@ -135,14 +125,8 @@ public class TextDataService {
         return null;
     }
 
-    // ========================================
-    // 作業時間管理メソッド
-    // ========================================
-
     /**
      * 作業セッションの時間を保存（日付指定）
-     * 
-     * 📚 新しい実装：WorkSessionテーブルを使用してTODOとは独立して保存
      * 
      * @param userId       ユーザーID（ログインユーザー）
      * @param dateString   日付（"YYYY-MM-DD" 形式）

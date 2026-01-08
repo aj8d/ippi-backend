@@ -1,7 +1,7 @@
 package com.example.ippi.dto;
 
 /**
- * 📚 WidgetDTO
+ * WidgetDTO
  * 
  * フロントエンドとのデータ交換用オブジェクト
  * Entity と同じ構造だが、User オブジェクトの代わりに必要な情報のみ含む

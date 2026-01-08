@@ -2,7 +2,7 @@ package com.example.ippi.dto;
 
 public class DailyStats {
     private String date;      // YYYY-MM-DD 形式
-    private Integer count;    // その日のストローク数
+    private Integer count;
 
     public DailyStats() {}
 

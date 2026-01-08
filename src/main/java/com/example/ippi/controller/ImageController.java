@@ -16,11 +16,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * 📚 ImageController - 画像アップロード用コントローラー
- * 
- * キャンバスの画像ウィジェット用にCloudinaryへ画像をアップロードする
- * 
- * 注意: サーバーのコンテキストパスが /api なので、ここでは /images のみ
+ * 画像アップロード用コントローラー
  */
 @RestController
 @RequestMapping("/images")
@@ -36,7 +32,7 @@ public class ImageController {
     }
 
     /**
-     * 📚 画像をCloudinaryにアップロード
+     * 画像をCloudinaryにアップロード
      * 
      * @param file アップロードする画像ファイル
      * @param principal 認証済みユーザー情報
@@ -102,7 +98,7 @@ public class ImageController {
     }
 
     /**
-     * 📚 Cloudinaryから画像を削除
+     * Cloudinaryから画像を削除
      * 
      * @param publicId 削除する画像のpublic_id
      * @param principal 認証済みユーザー情報

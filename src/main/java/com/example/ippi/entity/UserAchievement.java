@@ -4,10 +4,6 @@ import jakarta.persistence.*;
 
 /**
  * ユーザーアチーブメント達成記録エンティティ
- * 
- * 📚 このエンティティの役割：
- * - どのユーザーがどのアチーブメントを達成したかを記録
- * - 達成日時を保存
  */
 @Entity
 @Table(name = "user_achievements", 

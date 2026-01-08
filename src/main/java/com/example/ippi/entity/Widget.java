@@ -3,8 +3,6 @@ package com.example.ippi.entity;
 import jakarta.persistence.*;
 
 /**
- * 📚 Widget エンティティ
- * 
  * キャンバス上のウィジェット情報をデータベースに保存
  * - 位置 (x, y)
  * - サイズ (width, height)
@@ -20,7 +18,7 @@ public class Widget {
     private Long id;
 
     /**
-     * 📚 ウィジェットの所有者
+     * ウィジェットの所有者
      * 多対一の関係: 1人のユーザーが複数のウィジェットを持てる
      */
     @ManyToOne(fetch = FetchType.LAZY)
@@ -28,47 +26,28 @@ public class Widget {
     private User user;
 
     /**
-     * 📚 フロントエンドで使うウィジェットID
+     * フロントエンドで使うウィジェットID
      * "widget-1234567890" のような形式
      */
     @Column(name = "widget_id", nullable = false)
     private String widgetId;
 
-    /**
-     * 📚 ウィジェットのタイプ
-     * timer, todo, streak, sticky, image など
-     */
+    // ウィジェットのタイプ
     @Column(nullable = false, length = 50)
     private String type;
 
-    /**
-     * 📚 X座標（ピクセル）
-     */
+    // 位置とサイズ
     @Column(nullable = false)
     private Double x;
-
-    /**
-     * 📚 Y座標（ピクセル）
-     */
     @Column(nullable = false)
     private Double y;
-
-    /**
-     * 📚 幅（ピクセル）
-     */
     @Column(nullable = false)
     private Double width;
-
-    /**
-     * 📚 高さ（ピクセル）
-     */
     @Column(nullable = false)
     private Double height;
 
     /**
-     * 📚 ウィジェット固有のデータ（JSON形式）
-     * 例: {"text": "メモ", "color": "yellow"} (付箋)
-     * 例: {"imageUrl": "https://...", "publicId": "..."} (画像)
+     * ウィジェット固有のデータ（JSON形式）
      */
     @Column(columnDefinition = "TEXT")
     private String data;

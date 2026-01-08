@@ -39,12 +39,12 @@ public class SecurityConfig {
                 .httpBasic(basic -> basic.disable())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(authz -> authz
-                        .requestMatchers("OPTIONS", "/**").permitAll()
+                        .requestMatchers("OPTIONS", "/**").permitAll() 
                         .requestMatchers("POST", "/auth/register", "/auth/login").permitAll()
                         .requestMatchers("GET", "/auth/profile").authenticated()
                         .requestMatchers("/text-data/**").authenticated()
-                        .requestMatchers("/widgets/**").authenticated()   // 🆕 ウィジェットAPI（コンテキストパスが/apiなので/api不要）
-                        .requestMatchers("/images/**").authenticated()    // 🆕 画像API
+                        .requestMatchers("/widgets/**").authenticated()
+                        .requestMatchers("/images/**").authenticated()
                         .anyRequest().permitAll()
                 )
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
