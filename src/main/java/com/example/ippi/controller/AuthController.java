@@ -246,7 +246,7 @@ public class AuthController {
                 return ResponseEntity.badRequest().body("ファイルが選択されていません");
             }
 
-            // Cloudinary にアップロード（プライベート）
+            // Cloudinary にアップロード
             Map uploadResult = cloudinary.uploader().upload(file.getBytes(),
                 ObjectUtils.asMap(
                     "folder", "ippi-profiles",

@@ -39,12 +39,12 @@ public class SecurityConfig {
                 .httpBasic(basic -> basic.disable())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(authz -> authz
-                        .requestMatchers("OPTIONS", "/**").permitAll()
+                        .requestMatchers("OPTIONS", "/**").permitAll() 
                         .requestMatchers("POST", "/auth/register", "/auth/login").permitAll()
                         .requestMatchers("GET", "/auth/profile").authenticated()
                         .requestMatchers("/text-data/**").authenticated()
-                        .requestMatchers("/widgets/**").authenticated()   // 🆕 ウィジェットAPI（コンテキストパスが/apiなので/api不要）
-                        .requestMatchers("/images/**").authenticated()    // 🆕 画像API
+                        .requestMatchers("/widgets/**").authenticated()
+                        .requestMatchers("/images/**").authenticated()
                         .anyRequest().permitAll()
                 )
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
@@ -55,7 +55,20 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(Arrays.asList("http://localhost:5173", "http://localhost:3000", "http://localhost:8080"));
+        
+        // 環境変数からCORS設定を取得（カンマ区切りで複数指定可能）
+        String allowedOrigins = System.getenv("ALLOWED_ORIGINS");
+        if (allowedOrigins != null && !allowedOrigins.isEmpty()) {
+            configuration.setAllowedOrigins(Arrays.asList(allowedOrigins.split(",")));
+        } else {
+            // デフォルトはローカル開発環境
+            configuration.setAllowedOrigins(Arrays.asList(
+                "http://localhost:5173", 
+                "http://localhost:3000", 
+                "http://localhost:8080"
+            ));
+        }
+        
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
         configuration.setAllowedHeaders(Arrays.asList("*"));
         configuration.setExposedHeaders(Arrays.asList("Authorization", "Content-Type"));

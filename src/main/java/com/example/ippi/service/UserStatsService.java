@@ -1,9 +1,12 @@
 package com.example.ippi.service;
 
+import com.example.ippi.dto.DailyStats;
 import com.example.ippi.dto.UserStatsDTO;
 import com.example.ippi.entity.User;
 import com.example.ippi.entity.UserStats;
+import com.example.ippi.entity.WorkSession;
 import com.example.ippi.repository.UserStatsRepository;
+import com.example.ippi.repository.WorkSessionRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -12,13 +15,12 @@ import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.TemporalAdjusters;
-import java.util.Arrays;
-import java.util.List;
+import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * ユーザー統計サービス
  * 
- * 📚 このサービスの役割：
  * - ユーザー統計の取得・更新
  * - ストリーク計算
  * - 週次・月次リセット
@@ -31,6 +33,9 @@ public class UserStatsService {
 
     @Autowired
     private AchievementService achievementService;
+
+    @Autowired
+    private WorkSessionRepository workSessionRepository;
 
     private static final DateTimeFormatter DATE_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd");
 
@@ -53,7 +58,7 @@ public class UserStatsService {
         
         if (stats == null) {
             // 統計がない場合はデフォルト値を返す
-            return new UserStatsDTO(0, 0, 0, 0, 0L, 0L, 0L, 0);
+            return new UserStatsDTO(0, 0, 0, 0, 0L, 0L, 0L, 0, 0);
         }
 
         // 週次・月次リセットをチェック
@@ -67,7 +72,8 @@ public class UserStatsService {
             stats.getTotalWorkSeconds(),
             stats.getWeeklyWorkSeconds(),
             stats.getMonthlyWorkSeconds(),
-            stats.getTotalTimerSessions()
+            stats.getTotalTimerSessions(),
+            stats.getDailyTimerCompletions() != null ? stats.getDailyTimerCompletions() : 0
         );
     }
 
@@ -130,6 +136,29 @@ public class UserStatsService {
             stats.setUpdatedAt(System.currentTimeMillis());
             userStatsRepository.save(stats);
         }
+    }
+
+    /**
+     * タイマー完了時に今日のカウントを加算
+     * ポモドーロ/フローモドーロの作業セッション完了時にのみ呼び出される
+     */
+    @Transactional
+    public void recordTimerCompletion(User user) {
+        UserStats stats = getOrCreateStats(user);
+        LocalDate today = LocalDate.now();
+        String todayStr = today.format(DATE_FORMAT);
+
+        // 日付が変わっていればリセット
+        if (stats.getLastCompletionDate() == null || !stats.getLastCompletionDate().equals(todayStr)) {
+            stats.setDailyTimerCompletions(1);
+            stats.setLastCompletionDate(todayStr);
+        } else {
+            // 同じ日ならカウント加算
+            stats.setDailyTimerCompletions(stats.getDailyTimerCompletions() + 1);
+        }
+
+        stats.setUpdatedAt(System.currentTimeMillis());
+        userStatsRepository.save(stats);
     }
 
     /**
@@ -217,5 +246,37 @@ public class UserStatsService {
             stats.setUpdatedAt(System.currentTimeMillis());
             userStatsRepository.save(stats);
         }
+    }
+
+    /**
+     * 日別のアクティビティデータを取得（カレンダー用）
+     * 過去365日分の作業時間を日付ごとに集計
+     */
+    public List<DailyStats> getDailyActivity(Long userId) {
+        LocalDate today = LocalDate.now();
+        LocalDate oneYearAgo = today.minusDays(365);
+        
+        // 過去365日分のWorkSessionを取得
+        List<WorkSession> sessions = workSessionRepository.findByUserId(userId);
+        
+        // 日付ごとに作業時間を集計（分単位）
+        Map<String, Integer> dailyMinutes = new HashMap<>();
+        
+        for (WorkSession session : sessions) {
+            LocalDate sessionDate = LocalDate.parse(session.getWorkDate(), DATE_FORMAT);
+            
+            // 過去365日以内のデータのみ
+            if (!sessionDate.isBefore(oneYearAgo) && !sessionDate.isAfter(today)) {
+                String dateStr = session.getWorkDate();
+                int minutes = (int) (session.getTimerSeconds() / 60);
+                dailyMinutes.merge(dateStr, minutes, Integer::sum);
+            }
+        }
+        
+        // DailyStatsDTOのリストに変換
+        return dailyMinutes.entrySet().stream()
+            .map(entry -> new DailyStats(entry.getKey(), entry.getValue()))
+            .sorted(Comparator.comparing(DailyStats::getDate))
+            .collect(Collectors.toList());
     }
 }

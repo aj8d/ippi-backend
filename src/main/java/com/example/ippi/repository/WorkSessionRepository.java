@@ -13,18 +13,12 @@ import java.util.Optional;
 @Repository
 public interface WorkSessionRepository extends JpaRepository<WorkSession, Long> {
     
-    /**
-     * ユーザーIDで作業セッションを検索
-     */
+    // ユーザーIDで作業セッションを取得
     List<WorkSession> findByUserId(Long userId);
     
-    /**
-     * ユーザーIDと日付で作業セッションを検索
-     */
+    // ユーザーIDと作業日で作業セッションを取得
     Optional<WorkSession> findByUserIdAndWorkDate(Long userId, String workDate);
     
-    /**
-     * ユーザーIDで作業セッションを削除
-     */
+    // ユーザーIDで全作業セッションを削除
     void deleteByUserId(Long userId);
 }

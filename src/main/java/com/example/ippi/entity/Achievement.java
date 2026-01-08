@@ -4,10 +4,6 @@ import jakarta.persistence.*;
 
 /**
  * アチーブメント定義エンティティ
- * 
- * 📚 このエンティティの役割：
- * - アプリで利用可能なアチーブメントの定義を保存
- * - 達成条件（type, threshold）を保持
  */
 @Entity
 @Table(name = "achievements")

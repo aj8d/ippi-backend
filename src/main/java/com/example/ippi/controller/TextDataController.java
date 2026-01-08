@@ -2,6 +2,7 @@ package com.example.ippi.controller;
 
 import com.example.ippi.entity.TextData;
 import com.example.ippi.entity.User;
+import com.example.ippi.entity.UserStats;
 import com.example.ippi.entity.WorkSession;
 import com.example.ippi.dto.WorkSessionRequest;
 import com.example.ippi.service.TextDataService;
@@ -19,24 +20,15 @@ import java.util.Map;
 import java.util.HashMap;
 
 /**
- * TextDataController - テキストデータと作業時間のREST APIコントローラー
+ * テキストデータと作業時間のREST APIコントローラー
  * 
- * 📚 このクラスの役割：
- * HTTPリクエストを受け取り、適切なサービスを呼び出してレスポンスを返す。
- * REST APIのエンドポイント（URL）を定義している。
- * 
- * 💡 アノテーションの説明：
- * - @RestController: このクラスがREST APIのコントローラーであることを示す
- * - @RequestMapping("/text-data"): ベースURLを "/api/text-data" に設定
- *   （/api は Spring Security の設定で追加される）
- * 
- * 📝 利用可能なエンドポイント：
+ * エンドポイント：
  * - GET    /api/text-data              - ユーザーの全データ取得
  * - GET    /api/text-data/{id}         - 特定のデータ取得
  * - POST   /api/text-data              - 新規作成
  * - PUT    /api/text-data/{id}         - 更新
  * - DELETE /api/text-data/{id}         - 削除
- * - POST   /api/text-data/work-session - 作業セッション保存 ← 新規追加！
+ * - POST   /api/text-data/work-session - 作業セッション保存
  */
 @RestController
 @RequestMapping("/text-data")
@@ -225,18 +217,32 @@ public class TextDataController {
         return ResponseEntity.notFound().build();
     }
 
-    // ========================================
-    // 作業セッション保存エンドポイント（新規追加）
-    // ========================================
+    // POST: タイマー完了を記録（今日のカウント加算）
+    @PostMapping("/timer-completion")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<Map<String, Object>> recordTimerCompletion(Principal principal) {
+        String email = principal.getName();
+        Optional<User> userOpt = userRepository.findByEmail(email);
+        
+        if (userOpt.isEmpty()) {
+            return ResponseEntity.badRequest().body(Map.of("error", "User not found"));
+        }
+        
+        User user = userOpt.get();
+        userStatsService.recordTimerCompletion(user);
+        
+        // 更新後の統計を返す
+        UserStats stats = userStatsService.getOrCreateStats(user);
+        return ResponseEntity.ok(Map.of(
+            "dailyTimerCompletions", stats.getDailyTimerCompletions(),
+            "lastCompletionDate", stats.getLastCompletionDate()
+        ));
+    }
 
     /**
-     * POST: 作業セッションの時間を保存
+     * 作業セッションの時間を保存
      * 
-     * 📚 このエンドポイントの役割：
-     * フロントエンドのタイマーウィジェットが完了した時に呼び出される。
-     * その日の作業時間を記録し、統計データとして蓄積する。
-     * 
-     * 💡 リクエスト形式：
+     * リクエスト形式：
      * POST /api/text-data/work-session
      * Content-Type: application/json
      * Authorization: Bearer {token}
@@ -245,14 +251,6 @@ public class TextDataController {
      *   "date": "2024-12-31",
      *   "timerSeconds": 1500
      * }
-     * 
-     * 💡 レスポンス：
-     * 成功時: 200 OK + 保存されたTextDataオブジェクト
-     * 失敗時: 400 Bad Request（ユーザー未認証など）
-     * 
-     * 📝 特徴：
-     * - 同じ日に複数回呼び出すと、作業時間が累積される
-     * - これにより、1日の総作業時間を正確に記録できる
      * 
      * @param request WorkSessionRequest（日付と作業秒数を含む）
      * @param principal 認証情報（ログインユーザー）
@@ -264,10 +262,7 @@ public class TextDataController {
             @RequestBody WorkSessionRequest request,
             Principal principal) {
         
-        // ========================================
-        // 1. ユーザー認証の確認
-        // ========================================
-        // 📚 Principal: Spring Securityが提供する認証情報
+        // Principal: Spring Securityが提供する認証情報
         // getName()でログインユーザーのメールアドレスを取得
         String email = principal.getName();
         
@@ -282,10 +277,6 @@ public class TextDataController {
         User user = userOpt.get();
         Long userId = user.getId();
         
-        // ========================================
-        // 2. バリデーション（入力値チェック）
-        // ========================================
-        // 📚 なぜバリデーション？
         // 不正なデータがデータベースに保存されるのを防ぐ
         if (request.getDate() == null || request.getTimerSeconds() == null) {
             return ResponseEntity.badRequest().build();
@@ -296,9 +287,6 @@ public class TextDataController {
             return ResponseEntity.badRequest().build();
         }
         
-        // ========================================
-        // 3. 作業セッションを保存
-        // ========================================
         // サービス層に処理を委譲
         WorkSession savedSession = textDataService.saveWorkSession(
                 userId,
@@ -306,14 +294,10 @@ public class TextDataController {
                 request.getTimerSeconds()
         );
         
-        // ========================================
-        // 4. ユーザー統計を更新
-        // ========================================
+        // ユーザー統計を更新
         userStatsService.recordWorkSession(user, request.getDate(), request.getTimerSeconds());
         
-        // ========================================
-        // 5. アクティビティを作成（フィード用）
-        // ========================================
+        // アクティビティを作成（フィード用）
         // 作業時間を分に変換してアクティビティを作成
         // 1時間以上（3600秒以上）の作業のみフィードに投稿
         int minutes = (int) (request.getTimerSeconds() / 60);

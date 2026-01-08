@@ -2,10 +2,8 @@ package com.example.ippi.controller;
 
 import com.example.ippi.dto.FollowStatsDTO;
 import com.example.ippi.dto.FollowUserDTO;
-import com.example.ippi.entity.Activity;
 import com.example.ippi.entity.Follow;
 import com.example.ippi.entity.User;
-import com.example.ippi.repository.ActivityRepository;
 import com.example.ippi.repository.FollowRepository;
 import com.example.ippi.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -28,9 +26,6 @@ public class FollowController {
 
     @Autowired
     private UserRepository userRepository;
-
-    @Autowired
-    private ActivityRepository activityRepository;
 
     // フォローする
     @PostMapping("/{userId}")
@@ -59,16 +54,6 @@ public class FollowController {
         // フォロー作成
         Follow follow = new Follow(currentUser, targetUser, System.currentTimeMillis());
         followRepository.save(follow);
-
-        // フォローアクティビティを作成
-        Activity activity = new Activity(
-            currentUser,
-            Activity.TYPE_FOLLOW,
-            currentUser.getName() + "さんが" + targetUser.getName() + "さんをフォローしました",
-            "{\"targetUserId\":" + targetUser.getId() + "}",
-            System.currentTimeMillis()
-        );
-        activityRepository.save(activity);
 
         Map<String, Object> response = new HashMap<>();
         response.put("success", true);

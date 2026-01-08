@@ -13,6 +13,7 @@ public class UserStatsDTO {
     private Long weeklyWorkSeconds;
     private Long monthlyWorkSeconds;
     private Integer totalTimerSessions;
+    private Integer dailyTimerCompletions;
     
     // 計算値（時間単位）
     private Double totalWorkHours;
@@ -24,7 +25,7 @@ public class UserStatsDTO {
 
     public UserStatsDTO(Integer currentStreak, Integer longestStreak, Integer totalWorkDays,
                         Integer completedTodos, Long totalWorkSeconds, Long weeklyWorkSeconds,
-                        Long monthlyWorkSeconds, Integer totalTimerSessions) {
+                        Long monthlyWorkSeconds, Integer totalTimerSessions, Integer dailyTimerCompletions) {
         this.currentStreak = currentStreak;
         this.longestStreak = longestStreak;
         this.totalWorkDays = totalWorkDays;
@@ -33,6 +34,7 @@ public class UserStatsDTO {
         this.weeklyWorkSeconds = weeklyWorkSeconds;
         this.monthlyWorkSeconds = monthlyWorkSeconds;
         this.totalTimerSessions = totalTimerSessions;
+        this.dailyTimerCompletions = dailyTimerCompletions;
         
         // 時間単位に変換
         this.totalWorkHours = totalWorkSeconds / 3600.0;
@@ -142,5 +144,13 @@ public class UserStatsDTO {
 
     public void setAverageWorkMinutesPerDay(Double averageWorkMinutesPerDay) {
         this.averageWorkMinutesPerDay = averageWorkMinutesPerDay;
+    }
+
+    public Integer getDailyTimerCompletions() {
+        return dailyTimerCompletions;
+    }
+
+    public void setDailyTimerCompletions(Integer dailyTimerCompletions) {
+        this.dailyTimerCompletions = dailyTimerCompletions;
     }
 }
