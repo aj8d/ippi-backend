@@ -74,4 +74,19 @@ public class UserStatsController {
         UserStatsDTO stats = userStatsService.getStatsByUserId(userOpt.get().getId());
         return ResponseEntity.ok(stats);
     }
+
+    /**
+     * customIdでユーザーの日別アクティビティを取得（カレンダー用）
+     */
+    @GetMapping("/user/{customId}/daily-activity")
+    public ResponseEntity<?> getDailyActivityByCustomId(@PathVariable String customId) {
+        Optional<User> userOpt = userRepository.findByCustomId(customId);
+
+        if (userOpt.isEmpty()) {
+            return ResponseEntity.badRequest().body(Map.of("error", "User not found"));
+        }
+
+        var dailyActivity = userStatsService.getDailyActivity(userOpt.get().getId());
+        return ResponseEntity.ok(Map.of("stats", dailyActivity));
+    }
 }

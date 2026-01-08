@@ -1,9 +1,12 @@
 package com.example.ippi.service;
 
+import com.example.ippi.dto.DailyStats;
 import com.example.ippi.dto.UserStatsDTO;
 import com.example.ippi.entity.User;
 import com.example.ippi.entity.UserStats;
+import com.example.ippi.entity.WorkSession;
 import com.example.ippi.repository.UserStatsRepository;
+import com.example.ippi.repository.WorkSessionRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -12,8 +15,8 @@ import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.TemporalAdjusters;
-import java.util.Arrays;
-import java.util.List;
+import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * ユーザー統計サービス
@@ -30,6 +33,9 @@ public class UserStatsService {
 
     @Autowired
     private AchievementService achievementService;
+
+    @Autowired
+    private WorkSessionRepository workSessionRepository;
 
     private static final DateTimeFormatter DATE_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd");
 
@@ -240,5 +246,37 @@ public class UserStatsService {
             stats.setUpdatedAt(System.currentTimeMillis());
             userStatsRepository.save(stats);
         }
+    }
+
+    /**
+     * 日別のアクティビティデータを取得（カレンダー用）
+     * 過去365日分の作業時間を日付ごとに集計
+     */
+    public List<DailyStats> getDailyActivity(Long userId) {
+        LocalDate today = LocalDate.now();
+        LocalDate oneYearAgo = today.minusDays(365);
+        
+        // 過去365日分のWorkSessionを取得
+        List<WorkSession> sessions = workSessionRepository.findByUserId(userId);
+        
+        // 日付ごとに作業時間を集計（分単位）
+        Map<String, Integer> dailyMinutes = new HashMap<>();
+        
+        for (WorkSession session : sessions) {
+            LocalDate sessionDate = LocalDate.parse(session.getWorkDate(), DATE_FORMAT);
+            
+            // 過去365日以内のデータのみ
+            if (!sessionDate.isBefore(oneYearAgo) && !sessionDate.isAfter(today)) {
+                String dateStr = session.getWorkDate();
+                int minutes = (int) (session.getTimerSeconds() / 60);
+                dailyMinutes.merge(dateStr, minutes, Integer::sum);
+            }
+        }
+        
+        // DailyStatsDTOのリストに変換
+        return dailyMinutes.entrySet().stream()
+            .map(entry -> new DailyStats(entry.getKey(), entry.getValue()))
+            .sorted(Comparator.comparing(DailyStats::getDate))
+            .collect(Collectors.toList());
     }
 }
