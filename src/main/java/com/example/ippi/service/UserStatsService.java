@@ -64,6 +64,9 @@ public class UserStatsService {
         // 週次・月次リセットをチェック
         checkAndResetPeriods(stats);
 
+        // 日次タイマー完了数のリセットをチェック
+        int dailyCompletions = getDailyTimerCompletions(stats);
+
         return new UserStatsDTO(
             stats.getCurrentStreak(),
             stats.getLongestStreak(),
@@ -73,8 +76,33 @@ public class UserStatsService {
             stats.getWeeklyWorkSeconds(),
             stats.getMonthlyWorkSeconds(),
             stats.getTotalTimerSessions(),
-            stats.getDailyTimerCompletions() != null ? stats.getDailyTimerCompletions() : 0
+            dailyCompletions
         );
+    }
+
+    /**
+     * 日次タイマー完了数を取得（日付が変わっていれば0を返す）
+     */
+    private int getDailyTimerCompletions(UserStats stats) {
+        if (stats.getDailyTimerCompletions() == null || stats.getDailyTimerCompletions() == 0) {
+            return 0;
+        }
+
+        // 最後の完了日をチェック
+        String lastCompletionDate = stats.getLastCompletionDate();
+        if (lastCompletionDate == null) {
+            return 0;
+        }
+
+        LocalDate today = LocalDate.now();
+        String todayStr = today.format(DATE_FORMAT);
+
+        // 日付が変わっていれば0を返す
+        if (!lastCompletionDate.equals(todayStr)) {
+            return 0;
+        }
+
+        return stats.getDailyTimerCompletions();
     }
 
     /**
