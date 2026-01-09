@@ -69,6 +69,11 @@ public class SecurityConfig {
             ));
         }
         
+        // Vercelのプレビューデプロイメント用のパターンマッチングを追加
+        configuration.setAllowedOriginPatterns(Arrays.asList(
+            "https://*.vercel.app"
+        ));
+        
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
         configuration.setAllowedHeaders(Arrays.asList("*"));
         configuration.setExposedHeaders(Arrays.asList("Authorization", "Content-Type"));
