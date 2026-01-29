@@ -8,6 +8,7 @@ import com.example.ippi.dto.WorkSessionRequest;
 import com.example.ippi.service.TextDataService;
 import com.example.ippi.service.ActivityService;
 import com.example.ippi.repository.UserRepository;
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -259,7 +260,7 @@ public class TextDataController {
     @PostMapping("/work-session")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<WorkSession> saveWorkSession(
-            @RequestBody WorkSessionRequest request,
+            @Valid @RequestBody WorkSessionRequest request,
             Principal principal) {
         
         // Principal: Spring Securityが提供する認証情報

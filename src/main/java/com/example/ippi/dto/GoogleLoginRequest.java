@@ -1,6 +1,9 @@
 package com.example.ippi.dto;
 
+import jakarta.validation.constraints.NotBlank;
+
 public class GoogleLoginRequest {
+    @NotBlank(message = "IDトークンは必須です")
     private String idToken;
 
     public GoogleLoginRequest() {}
