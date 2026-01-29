@@ -6,6 +6,7 @@ import com.example.ippi.entity.Follow;
 import com.example.ippi.entity.User;
 import com.example.ippi.repository.FollowRepository;
 import com.example.ippi.repository.UserRepository;
+import com.example.ippi.service.ActivityService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -26,6 +27,9 @@ public class FollowController {
 
     @Autowired
     private UserRepository userRepository;
+
+    @Autowired
+    private ActivityService activityService;
 
     // フォローする
     @PostMapping("/{userId}")
@@ -54,6 +58,9 @@ public class FollowController {
         // フォロー作成
         Follow follow = new Follow(currentUser, targetUser, System.currentTimeMillis());
         followRepository.save(follow);
+
+        // フォローされたユーザーのフィードにアクティビティを作成
+        activityService.createFollowedActivity(targetUser, currentUser);
 
         Map<String, Object> response = new HashMap<>();
         response.put("success", true);

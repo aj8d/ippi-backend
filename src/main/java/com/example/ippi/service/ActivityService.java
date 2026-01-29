@@ -28,4 +28,23 @@ public class ActivityService {
         );
         activityRepository.save(activity);
     }
+
+    /**
+     * フォローされた時のアクティビティを作成
+     * @param followedUser フォローされたユーザー（アクティビティの所有者）
+     * @param follower フォローしたユーザー
+     */
+    public void createFollowedActivity(User followedUser, User follower) {
+        String message = follower.getName() + "さんにフォローされました";
+        String relatedData = "{\"followerId\":" + follower.getId() + ",\"followerName\":\"" + follower.getName() + "\"}";
+        
+        Activity activity = new Activity(
+            followedUser,
+            Activity.TYPE_FOLLOW,
+            message,
+            relatedData,
+            System.currentTimeMillis()
+        );
+        activityRepository.save(activity);
+    }
 }

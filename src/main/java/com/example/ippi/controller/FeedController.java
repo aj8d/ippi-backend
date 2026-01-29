@@ -79,9 +79,9 @@ public class FeedController {
         // 現在のユーザーがいいねしたアクティビティのIDリスト
         List<Long> likedActivityIds = feedLikeRepository.findLikedActivityIdsByUser(currentUser);
 
-        // フォローアクティビティを除外
+        // アチーブメントアクティビティを除外
         List<FeedItemDTO> feedItems = activities.stream()
-            .filter(activity -> !Activity.TYPE_FOLLOW.equals(activity.getActivityType()))
+            .filter(activity -> !Activity.TYPE_ACHIEVEMENT.equals(activity.getActivityType()))
             .map(activity -> {
             User user = activity.getUser();
             FeedItemDTO dto = new FeedItemDTO(
