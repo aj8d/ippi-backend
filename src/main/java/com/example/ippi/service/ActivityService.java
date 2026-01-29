@@ -12,7 +12,6 @@ public class ActivityService {
     @Autowired
     private ActivityRepository activityRepository;
 
-    // 作業完了アクティビティを作成
     public void createWorkCompletedActivity(User user, int minutes) {
         int hours = minutes / 60;
         int mins = minutes % 60;

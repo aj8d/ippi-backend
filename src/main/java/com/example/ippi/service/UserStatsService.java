@@ -20,10 +20,6 @@ import java.util.stream.Collectors;
 
 /**
  * ユーザー統計サービス
- * 
- * - ユーザー統計の取得・更新
- * - ストリーク計算
- * - 週次・月次リセット
  */
 @Service
 public class UserStatsService {
@@ -36,9 +32,6 @@ public class UserStatsService {
 
     private static final DateTimeFormatter DATE_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd");
 
-    /**
-     * ユーザーの統計を取得（なければ作成）
-     */
     public UserStats getOrCreateStats(User user) {
         return userStatsRepository.findByUser(user)
                 .orElseGet(() -> {
