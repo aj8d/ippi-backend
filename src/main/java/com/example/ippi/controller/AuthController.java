@@ -10,8 +10,12 @@ import com.example.ippi.repository.UserRepository;
 import com.example.ippi.security.GoogleTokenVerifier;
 import com.example.ippi.security.JwtTokenProvider;
 import com.example.ippi.service.TextDataService;
+import com.example.ippi.util.FileValidationUtil;
 import com.cloudinary.Cloudinary;
 import com.cloudinary.utils.ObjectUtils;
+import jakarta.validation.Valid;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -29,6 +33,8 @@ import java.util.Optional;
 @RestController
 @RequestMapping("/auth")
 public class AuthController {
+
+    private static final Logger logger = LoggerFactory.getLogger(AuthController.class);
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
@@ -49,7 +55,7 @@ public class AuthController {
     }
 
     @PostMapping("/register")
-    public ResponseEntity<?> register(@RequestBody AuthRequest request) {
+    public ResponseEntity<?> register(@Valid @RequestBody AuthRequest request) {
         // メール重複チェック
         if (userRepository.findByEmail(request.getEmail()).isPresent()) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
@@ -88,7 +94,7 @@ public class AuthController {
     }
 
     @PostMapping("/login")
-    public ResponseEntity<?> login(@RequestBody AuthRequest request) {
+    public ResponseEntity<?> login(@Valid @RequestBody AuthRequest request) {
         // ユーザーを取得
         User user = userRepository.findByEmail(request.getEmail())
                 .orElse(null);
@@ -165,7 +171,7 @@ public class AuthController {
     }
 
     @PostMapping("/google-login")
-    public ResponseEntity<?> googleLogin(@RequestBody GoogleLoginRequest request) {
+    public ResponseEntity<?> googleLogin(@Valid @RequestBody GoogleLoginRequest request) {
         try {
             // Google ID Token を検証
             com.google.api.client.googleapis.auth.oauth2.GoogleIdToken.Payload payload =
@@ -203,14 +209,17 @@ public class AuthController {
             return ResponseEntity.ok(new AuthResponse(token, user.getId(), user.getEmail(), user.getName(), user.getProfileImageUrl(), user.getDescription(), user.getCustomId()));
 
         } catch (IOException e) {
+            logger.error("Googleログインエラー: 無効なIDトークン", e);
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body("無効な Google ID Token: " + e.getMessage());
+                    .body("認証に失敗しました");
         } catch (GeneralSecurityException e) {
+            logger.error("Googleログインエラー: トークン検証失敗", e);
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body("Google トークン検証に失敗しました: " + e.getMessage());
+                    .body("認証に失敗しました");
         } catch (Exception e) {
+            logger.error("Googleログインエラー: 予期しないエラー", e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body("予期しないエラーが発生しました: " + e.getMessage());
+                    .body("サーバーエラーが発生しました");
         }
     }
 
@@ -246,8 +255,17 @@ public class AuthController {
                 return ResponseEntity.badRequest().body("ファイルが選択されていません");
             }
 
-            // Cloudinary にアップロード
-            Map uploadResult = cloudinary.uploader().upload(file.getBytes(),
+            if (file.getSize() > 5 * 1024 * 1024) {
+                return ResponseEntity.badRequest().body("ファイルサイズは5MB以下にしてください");
+            }
+
+            byte[] fileBytes = file.getBytes();
+
+            if (!FileValidationUtil.isValidImage(fileBytes)) {
+                return ResponseEntity.badRequest().body("有効な画像ファイルをアップロードしてください");
+            }
+
+            Map uploadResult = cloudinary.uploader().upload(fileBytes,
                 ObjectUtils.asMap(
                     "folder", "ippi-profiles",
                     "public_id", "user_" + user.getId(),
@@ -258,15 +276,15 @@ public class AuthController {
 
             String imageUrl = (String) uploadResult.get("secure_url");
 
-            // ユーザーに画像URL を保存
             user.setProfileImageUrl(imageUrl);
             user.setUpdatedAt(System.currentTimeMillis());
             userRepository.save(user);
 
             return ResponseEntity.ok(new AuthResponse(null, user.getId(), user.getEmail(), user.getName(), imageUrl, user.getDescription(), user.getCustomId()));
         } catch (IOException e) {
+            logger.error("プロフィール画像アップロードエラー", e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body("画像アップロードに失敗しました: " + e.getMessage());
+                    .body("画像アップロードに失敗しました");
         }
     }
 
@@ -309,8 +327,9 @@ public class AuthController {
 
             return ResponseEntity.ok(new AuthResponse(null, user.getId(), user.getEmail(), user.getName(), user.getProfileImageUrl(), user.getDescription(), user.getCustomId()));
         } catch (Exception e) {
+            logger.error("プロフィール更新エラー", e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body("プロフィール更新に失敗しました: " + e.getMessage());
+                    .body("プロフィール更新に失敗しました");
         }
     }
 }

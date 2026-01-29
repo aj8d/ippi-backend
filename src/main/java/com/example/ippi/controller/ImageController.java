@@ -4,6 +4,9 @@ import com.cloudinary.Cloudinary;
 import com.cloudinary.utils.ObjectUtils;
 import com.example.ippi.entity.User;
 import com.example.ippi.repository.UserRepository;
+import com.example.ippi.util.FileValidationUtil;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -15,13 +18,12 @@ import java.security.Principal;
 import java.util.HashMap;
 import java.util.Map;
 
-/**
- * 画像アップロード用コントローラー
- */
 @RestController
 @RequestMapping("/images")
 @CrossOrigin(origins = {"http://localhost:5173", "http://127.0.0.1:5173"})
 public class ImageController {
+
+    private static final Logger logger = LoggerFactory.getLogger(ImageController.class);
 
     private final Cloudinary cloudinary;
     private final UserRepository userRepository;
@@ -31,13 +33,6 @@ public class ImageController {
         this.userRepository = userRepository;
     }
 
-    /**
-     * 画像をCloudinaryにアップロード
-     * 
-     * @param file アップロードする画像ファイル
-     * @param principal 認証済みユーザー情報
-     * @return アップロードされた画像のURL
-     */
     @PostMapping("/upload")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<?> uploadImage(
@@ -57,24 +52,27 @@ public class ImageController {
                         .body(Map.of("error", "ファイルが選択されていません"));
             }
 
-            // ファイルサイズチェック（5MB制限）
             if (file.getSize() > 5 * 1024 * 1024) {
                 return ResponseEntity.badRequest()
                         .body(Map.of("error", "ファイルサイズは5MB以下にしてください"));
             }
 
-            // 画像タイプチェック
-            String contentType = file.getContentType();
-            if (contentType == null || !contentType.startsWith("image/")) {
+            byte[] fileBytes = file.getBytes();
+
+            if (!FileValidationUtil.isValidImage(fileBytes)) {
                 return ResponseEntity.badRequest()
-                        .body(Map.of("error", "画像ファイルのみアップロードできます"));
+                        .body(Map.of("error", "有効な画像ファイルをアップロードしてください"));
             }
 
-            // ユニークなpublic_idを生成（ユーザーID + タイムスタンプ）
+            String detectedType = FileValidationUtil.detectImageType(fileBytes);
+            String contentType = file.getContentType();
+            if (contentType != null && !contentType.startsWith("image/")) {
+                logger.warn("Content-Type mismatch: header={}, detected={}", contentType, detectedType);
+            }
+
             String publicId = "widget_" + user.getId() + "_" + System.currentTimeMillis();
 
-            // Cloudinaryにアップロード
-            Map uploadResult = cloudinary.uploader().upload(file.getBytes(),
+            Map uploadResult = cloudinary.uploader().upload(fileBytes,
                     ObjectUtils.asMap(
                             "folder", "ippi-widgets",
                             "public_id", publicId,
@@ -84,7 +82,6 @@ public class ImageController {
             String imageUrl = (String) uploadResult.get("secure_url");
             String publicIdResult = (String) uploadResult.get("public_id");
 
-            // レスポンスを返す
             Map<String, Object> response = new HashMap<>();
             response.put("url", imageUrl);
             response.put("publicId", publicIdResult);
@@ -92,18 +89,12 @@ public class ImageController {
             return ResponseEntity.ok(response);
 
         } catch (IOException e) {
+            logger.error("画像アップロードエラー", e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of("error", "画像アップロードに失敗しました: " + e.getMessage()));
+                    .body(Map.of("error", "画像アップロードに失敗しました"));
         }
     }
 
-    /**
-     * Cloudinaryから画像を削除
-     * 
-     * @param publicId 削除する画像のpublic_id
-     * @param principal 認証済みユーザー情報
-     * @return 削除結果
-     */
     @DeleteMapping("/delete")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<?> deleteImage(
@@ -118,20 +109,19 @@ public class ImageController {
                         .body(Map.of("error", "ユーザーが見つかりません"));
             }
 
-            // publicIdにユーザーIDが含まれているかチェック（セキュリティ）
             if (!publicId.contains("widget_" + user.getId())) {
                 return ResponseEntity.status(HttpStatus.FORBIDDEN)
                         .body(Map.of("error", "この画像を削除する権限がありません"));
             }
 
-            // Cloudinaryから削除
             Map result = cloudinary.uploader().destroy(publicId, ObjectUtils.emptyMap());
 
             return ResponseEntity.ok(Map.of("result", result.get("result")));
 
         } catch (Exception e) {
+            logger.error("画像削除エラー", e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of("error", "画像削除に失敗しました: " + e.getMessage()));
+                    .body(Map.of("error", "画像削除に失敗しました"));
         }
     }
 }

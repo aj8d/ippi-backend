@@ -1,6 +1,7 @@
 package com.example.ippi.controller;
 
 import com.example.ippi.dto.CommentDTO;
+import com.example.ippi.dto.CommentRequest;
 import com.example.ippi.dto.FeedItemDTO;
 import com.example.ippi.entity.Activity;
 import com.example.ippi.entity.FeedComment;
@@ -11,11 +12,15 @@ import com.example.ippi.repository.FeedCommentRepository;
 import com.example.ippi.repository.FeedLikeRepository;
 import com.example.ippi.repository.FollowRepository;
 import com.example.ippi.repository.UserRepository;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.ArrayList;
@@ -26,6 +31,7 @@ import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/feed")
+@Validated
 public class FeedController {
 
     @Autowired
@@ -46,8 +52,8 @@ public class FeedController {
     // フィード取得（フォローしているユーザーのアクティビティ）
     @GetMapping
     public ResponseEntity<?> getFeed(
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size,
+            @RequestParam(defaultValue = "0") @Min(0) int page,
+            @RequestParam(defaultValue = "20") @Min(1) @Max(100) int size,
             Authentication authentication) {
         
         String email = authentication.getName();
@@ -266,7 +272,7 @@ public class FeedController {
     @PostMapping("/{feedId}/comments")
     public ResponseEntity<?> addComment(
             @PathVariable Long feedId,
-            @RequestBody Map<String, String> request,
+            @Valid @RequestBody CommentRequest request,
             Authentication authentication) {
         
         String email = authentication.getName();
@@ -277,10 +283,7 @@ public class FeedController {
             return ResponseEntity.badRequest().body(Map.of("error", "User or Activity not found"));
         }
 
-        String text = request.get("text");
-        if (text == null || text.trim().isEmpty()) {
-            return ResponseEntity.badRequest().body(Map.of("error", "Comment text is required"));
-        }
+        String text = request.getText();
 
         User currentUser = currentUserOpt.get();
         Activity activity = activityOpt.get();
