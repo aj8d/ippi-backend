@@ -32,9 +32,6 @@ public class UserStatsService {
     private UserStatsRepository userStatsRepository;
 
     @Autowired
-    private AchievementService achievementService;
-
-    @Autowired
     private WorkSessionRepository workSessionRepository;
 
     private static final DateTimeFormatter DATE_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd");
@@ -134,9 +131,6 @@ public class UserStatsService {
         stats.setUpdatedAt(System.currentTimeMillis());
 
         userStatsRepository.save(stats);
-
-        // アチーブメント判定を実行
-        achievementService.checkAndAwardAchievements(user, stats);
     }
 
     /**
@@ -148,9 +142,6 @@ public class UserStatsService {
         stats.setCompletedTodos(stats.getCompletedTodos() + 1);
         stats.setUpdatedAt(System.currentTimeMillis());
         userStatsRepository.save(stats);
-        
-        // アチーブメント判定を実行
-        achievementService.checkAndAwardAchievements(user, stats);
     }
 
     /**

@@ -29,19 +29,4 @@ public class ActivityService {
         );
         activityRepository.save(activity);
     }
-
-    // アチーブメントアクティビティを作成
-    public void createAchievementActivity(User user, String achievementName, String achievementDescription) {
-        String message = "「" + achievementName + "」を達成しました！";
-        String relatedData = "{\"achievementName\":\"" + achievementName + "\",\"description\":\"" + achievementDescription + "\"}";
-        
-        Activity activity = new Activity(
-            user,
-            Activity.TYPE_ACHIEVEMENT,
-            message,
-            relatedData,
-            System.currentTimeMillis()
-        );
-        activityRepository.save(activity);
-    }
 }

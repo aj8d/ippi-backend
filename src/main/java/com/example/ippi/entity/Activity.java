@@ -38,7 +38,6 @@ public class Activity {
 
     // アクティビティタイプの定数
     public static final String TYPE_WORK_COMPLETED = "work_completed";
-    public static final String TYPE_ACHIEVEMENT = "achievement";
     public static final String TYPE_FOLLOW = "follow";
 
     public Long getId() {
