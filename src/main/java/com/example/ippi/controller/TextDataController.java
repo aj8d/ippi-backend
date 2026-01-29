@@ -8,6 +8,7 @@ import com.example.ippi.dto.WorkSessionRequest;
 import com.example.ippi.service.TextDataService;
 import com.example.ippi.service.ActivityService;
 import com.example.ippi.repository.UserRepository;
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -259,7 +260,7 @@ public class TextDataController {
     @PostMapping("/work-session")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<WorkSession> saveWorkSession(
-            @RequestBody WorkSessionRequest request,
+            @Valid @RequestBody WorkSessionRequest request,
             Principal principal) {
         
         // Principal: Spring Securityが提供する認証情報
@@ -299,9 +300,9 @@ public class TextDataController {
         
         // アクティビティを作成（フィード用）
         // 作業時間を分に変換してアクティビティを作成
-        // 1時間以上（3600秒以上）の作業のみフィードに投稿
+        // 20分以上（1200秒以上）の作業のみフィードに投稿
         int minutes = (int) (request.getTimerSeconds() / 60);
-        if (request.getTimerSeconds() >= 3600) {
+        if (request.getTimerSeconds() >= 1200) {
             activityService.createWorkCompletedActivity(user, minutes);
         }
         
