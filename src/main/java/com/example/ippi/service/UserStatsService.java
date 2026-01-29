@@ -20,10 +20,6 @@ import java.util.stream.Collectors;
 
 /**
  * ユーザー統計サービス
- * 
- * - ユーザー統計の取得・更新
- * - ストリーク計算
- * - 週次・月次リセット
  */
 @Service
 public class UserStatsService {
@@ -32,16 +28,10 @@ public class UserStatsService {
     private UserStatsRepository userStatsRepository;
 
     @Autowired
-    private AchievementService achievementService;
-
-    @Autowired
     private WorkSessionRepository workSessionRepository;
 
     private static final DateTimeFormatter DATE_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd");
 
-    /**
-     * ユーザーの統計を取得（なければ作成）
-     */
     public UserStats getOrCreateStats(User user) {
         return userStatsRepository.findByUser(user)
                 .orElseGet(() -> {
@@ -134,9 +124,6 @@ public class UserStatsService {
         stats.setUpdatedAt(System.currentTimeMillis());
 
         userStatsRepository.save(stats);
-
-        // アチーブメント判定を実行
-        achievementService.checkAndAwardAchievements(user, stats);
     }
 
     /**
@@ -148,9 +135,6 @@ public class UserStatsService {
         stats.setCompletedTodos(stats.getCompletedTodos() + 1);
         stats.setUpdatedAt(System.currentTimeMillis());
         userStatsRepository.save(stats);
-        
-        // アチーブメント判定を実行
-        achievementService.checkAndAwardAchievements(user, stats);
     }
 
     /**
