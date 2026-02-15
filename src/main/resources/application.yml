@@ -1,9 +1,9 @@
 spring:
   datasource:
-    url: jdbc:mysql://${MYSQLHOST:localhost}:${MYSQLPORT:3306}/${MYSQLDATABASE:ippi_db}?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Tokyo&autoReconnect=true&useSSL=false&allowPublicKeyRetrieval=true
-    username: ${MYSQLUSER:root}
-    password: ${MYSQLPASSWORD:root}
-    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: ${DATABASE_URL:jdbc:postgresql://${PGHOST:localhost}:${PGPORT:5432}/${PGDATABASE:ippi_db}}
+    username: ${PGUSER:postgres}
+    password: ${PGPASSWORD:postgres}
+    driver-class-name: org.postgresql.Driver
 
   jpa:
     hibernate:
@@ -18,10 +18,7 @@ spring:
           use_national_character_set_strings: true
           charset_name: UTF-8
         physical_naming_strategy: org.hibernate.boot.model.naming.PhysicalNamingStrategyStandardImpl
-        dialect: org.hibernate.dialect.MySQL8Dialect
-        connection:
-          collation_connection: utf8mb4_unicode_ci
-          charset: utf8mb4
+        dialect: org.hibernate.dialect.PostgreSQLDialect
 
   security:
     oauth2:
