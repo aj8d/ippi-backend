@@ -13,6 +13,8 @@ import com.example.ippi.service.TextDataService;
 import com.example.ippi.util.FileValidationUtil;
 import com.cloudinary.Cloudinary;
 import com.cloudinary.utils.ObjectUtils;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.validation.Valid;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -26,15 +28,20 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
 import java.security.GeneralSecurityException;
 import java.security.Principal;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.regex.Pattern;
 
 @RestController
 @RequestMapping("/auth")
 public class AuthController {
 
     private static final Logger logger = LoggerFactory.getLogger(AuthController.class);
+    private static final String DEFAULT_PROFILE_THEME_PRESET = "paper";
+    private static final String DEFAULT_PROFILE_THEME_JSON = "{\"mode\":\"gradient\",\"solidColor\":\"#239a3b\",\"gradientFrom\":\"#7bc96f\",\"gradientTo\":\"#196127\",\"gradientAngle\":135}";
+    private static final Pattern HEX_COLOR_PATTERN = Pattern.compile("^#[0-9a-fA-F]{6}$");
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
@@ -42,16 +49,19 @@ public class AuthController {
     private final TextDataService textDataService;
     private final GoogleTokenVerifier googleTokenVerifier;
     private final Cloudinary cloudinary;
+    private final ObjectMapper objectMapper;
 
     public AuthController(UserRepository userRepository, PasswordEncoder passwordEncoder,
                          JwtTokenProvider jwtTokenProvider, TextDataService textDataService,
-                         GoogleTokenVerifier googleTokenVerifier, Cloudinary cloudinary) {
+                         GoogleTokenVerifier googleTokenVerifier, Cloudinary cloudinary,
+                         ObjectMapper objectMapper) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtTokenProvider = jwtTokenProvider;
         this.textDataService = textDataService;
         this.googleTokenVerifier = googleTokenVerifier;
         this.cloudinary = cloudinary;
+        this.objectMapper = objectMapper;
     }
 
     @PostMapping("/register")
@@ -80,6 +90,8 @@ public class AuthController {
         user.setPassword(passwordEncoder.encode(request.getPassword()));
         user.setName(request.getEmail().split("@")[0]);
         user.setCustomId(request.getCustomId().trim());
+        user.setProfileThemePreset(DEFAULT_PROFILE_THEME_PRESET);
+        user.setProfileThemeJson(DEFAULT_PROFILE_THEME_JSON);
         user.setCreatedAt(System.currentTimeMillis());
         user.setUpdatedAt(System.currentTimeMillis());
 
@@ -90,7 +102,7 @@ public class AuthController {
         String token = jwtTokenProvider.generateToken(savedUser.getEmail());
 
         // レスポンス返却
-        return ResponseEntity.ok(new AuthResponse(token, savedUser.getId(), savedUser.getEmail(), savedUser.getName(), savedUser.getProfileImageUrl(), savedUser.getDescription(), savedUser.getCustomId()));
+        return ResponseEntity.ok(buildAuthResponse(token, savedUser, savedUser.getEmail()));
     }
 
     @PostMapping("/login")
@@ -114,7 +126,7 @@ public class AuthController {
         String token = jwtTokenProvider.generateToken(user.getEmail());
 
         // レスポンス返却
-        return ResponseEntity.ok(new AuthResponse(token, user.getId(), user.getEmail(), user.getName(), user.getProfileImageUrl(), user.getDescription(), user.getCustomId()));
+        return ResponseEntity.ok(buildAuthResponse(token, user, user.getEmail()));
     }
 
     @GetMapping("/profile")
@@ -127,7 +139,7 @@ public class AuthController {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body("ユーザーが見つかりません");
         }
 
-        return ResponseEntity.ok(new AuthResponse(null, user.getId(), user.getEmail(), user.getName(), user.getProfileImageUrl(), user.getDescription(), user.getCustomId()));
+        return ResponseEntity.ok(buildAuthResponse(null, user, user.getEmail()));
     }
 
     @GetMapping("/profile/{id}")
@@ -140,7 +152,7 @@ public class AuthController {
         }
 
         // プロフィール情報を返却
-        return ResponseEntity.ok(new AuthResponse(null, user.getId(), null, user.getName(), user.getProfileImageUrl(), user.getDescription(), user.getCustomId()));
+        return ResponseEntity.ok(buildAuthResponse(null, user, null));
     }
 
     @GetMapping("/{id}")
@@ -153,7 +165,7 @@ public class AuthController {
         }
 
         // プロフィール情報を返却
-        return ResponseEntity.ok(new AuthResponse(null, user.getId(), null, user.getName(), user.getProfileImageUrl(), user.getDescription(), user.getCustomId()));
+        return ResponseEntity.ok(buildAuthResponse(null, user, null));
     }
 
     @GetMapping("/stats")
@@ -199,6 +211,8 @@ public class AuthController {
                 // 新規ユーザーを作成（Google では customId が必須なので、Google ID から生成する）
                 // または、Google ユーザーは後で customId を設定する必要がある
                 user = new User(email, name, googleId, email, System.currentTimeMillis(), System.currentTimeMillis());
+                user.setProfileThemePreset(DEFAULT_PROFILE_THEME_PRESET);
+                user.setProfileThemeJson(DEFAULT_PROFILE_THEME_JSON);
                 user = userRepository.save(user);
             }
 
@@ -206,7 +220,7 @@ public class AuthController {
             String token = jwtTokenProvider.generateToken(user.getEmail());
 
             // レスポンス返却
-            return ResponseEntity.ok(new AuthResponse(token, user.getId(), user.getEmail(), user.getName(), user.getProfileImageUrl(), user.getDescription(), user.getCustomId()));
+            return ResponseEntity.ok(buildAuthResponse(token, user, user.getEmail()));
 
         } catch (IOException e) {
             logger.error("Googleログインエラー: 無効なIDトークン", e);
@@ -280,7 +294,7 @@ public class AuthController {
             user.setUpdatedAt(System.currentTimeMillis());
             userRepository.save(user);
 
-            return ResponseEntity.ok(new AuthResponse(null, user.getId(), user.getEmail(), user.getName(), imageUrl, user.getDescription(), user.getCustomId()));
+            return ResponseEntity.ok(buildAuthResponse(null, user, user.getEmail()));
         } catch (IOException e) {
             logger.error("プロフィール画像アップロードエラー", e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
@@ -321,15 +335,131 @@ public class AuthController {
             if (updateData.getDescription() != null) {
                 user.setDescription(updateData.getDescription());
             }
+            if (updateData.getProfileThemePreset() != null && !updateData.getProfileThemePreset().isBlank()) {
+                user.setProfileThemePreset(updateData.getProfileThemePreset());
+            }
+            if (updateData.getProfileTheme() != null) {
+                user.setProfileThemeJson(serializeProfileTheme(updateData.getProfileTheme()));
+            }
+
+            if (user.getProfileThemeJson() == null || user.getProfileThemeJson().isBlank()) {
+                user.setProfileThemeJson(DEFAULT_PROFILE_THEME_JSON);
+            }
 
             user.setUpdatedAt(System.currentTimeMillis());
             userRepository.save(user);
 
-            return ResponseEntity.ok(new AuthResponse(null, user.getId(), user.getEmail(), user.getName(), user.getProfileImageUrl(), user.getDescription(), user.getCustomId()));
+            return ResponseEntity.ok(buildAuthResponse(null, user, user.getEmail()));
         } catch (Exception e) {
             logger.error("プロフィール更新エラー", e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body("プロフィール更新に失敗しました");
+        }
+    }
+
+    private AuthResponse buildAuthResponse(String token, User user, String email) {
+        AuthResponse response = new AuthResponse(
+                token,
+                user.getId(),
+                email,
+                user.getName(),
+                user.getProfileImageUrl(),
+                user.getDescription(),
+                user.getCustomId(),
+                user.getProfileThemePreset()
+        );
+        response.setProfileTheme(parseStoredProfileTheme(user.getProfileThemeJson()));
+        return response;
+    }
+
+    private Map<String, Object> parseStoredProfileTheme(String rawJson) {
+        if (rawJson == null || rawJson.isBlank()) {
+            return defaultProfileTheme();
+        }
+
+        try {
+            Map<String, Object> parsed = objectMapper.readValue(rawJson, new TypeReference<Map<String, Object>>() {});
+            return sanitizeProfileTheme(parsed);
+        } catch (Exception e) {
+            logger.warn("プロフィールテーマJSONのパースに失敗したためデフォルトを返却します", e);
+            return defaultProfileTheme();
+        }
+    }
+
+    private String serializeProfileTheme(Object rawTheme) {
+        try {
+            Map<String, Object> input = objectMapper.convertValue(rawTheme, new TypeReference<Map<String, Object>>() {});
+            Map<String, Object> sanitized = sanitizeProfileTheme(input);
+            return objectMapper.writeValueAsString(sanitized);
+        } catch (Exception e) {
+            logger.warn("プロフィールテーマJSONのシリアライズに失敗したためデフォルトを保存します", e);
+            return DEFAULT_PROFILE_THEME_JSON;
+        }
+    }
+
+    private Map<String, Object> defaultProfileTheme() {
+        try {
+            return objectMapper.readValue(DEFAULT_PROFILE_THEME_JSON, new TypeReference<Map<String, Object>>() {});
+        } catch (Exception e) {
+            Map<String, Object> fallback = new HashMap<>();
+            fallback.put("mode", "gradient");
+            fallback.put("solidColor", "#239a3b");
+            fallback.put("gradientFrom", "#7bc96f");
+            fallback.put("gradientTo", "#196127");
+            fallback.put("gradientAngle", 135);
+            return fallback;
+        }
+    }
+
+    private Map<String, Object> sanitizeProfileTheme(Map<String, Object> input) {
+        Map<String, Object> result = new HashMap<>();
+        Map<String, Object> defaults = defaultProfileTheme();
+
+        String mode = asString(input.get("mode"));
+        if (!"solid".equals(mode)) {
+            mode = "gradient";
+        }
+
+        String solidColor = sanitizeHex(asString(input.get("solidColor")), asString(defaults.get("solidColor")));
+        String gradientFrom = sanitizeHex(asString(input.get("gradientFrom")), asString(defaults.get("gradientFrom")));
+        String gradientTo = sanitizeHex(asString(input.get("gradientTo")), asString(defaults.get("gradientTo")));
+        int gradientAngle = sanitizeAngle(input.get("gradientAngle"), 135);
+
+        result.put("mode", mode);
+        result.put("solidColor", solidColor);
+        result.put("gradientFrom", gradientFrom);
+        result.put("gradientTo", gradientTo);
+        result.put("gradientAngle", gradientAngle);
+        return result;
+    }
+
+    private String asString(Object value) {
+        return value == null ? null : value.toString();
+    }
+
+    private String sanitizeHex(String value, String fallback) {
+        if (value != null && HEX_COLOR_PATTERN.matcher(value).matches()) {
+            return value;
+        }
+        return fallback;
+    }
+
+    private int sanitizeAngle(Object value, int fallback) {
+        if (value == null) {
+            return fallback;
+        }
+
+        try {
+            int angle = (int) Math.round(Double.parseDouble(value.toString()));
+            if (angle < 0) {
+                return 0;
+            }
+            if (angle > 360) {
+                return 360;
+            }
+            return angle;
+        } catch (Exception e) {
+            return fallback;
         }
     }
 }

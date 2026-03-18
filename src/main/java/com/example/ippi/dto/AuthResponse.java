@@ -8,6 +8,8 @@ public class AuthResponse {
     private String profileImageUrl;
     private String description;
     private String customId;
+    private String profileThemePreset;
+    private Object profileTheme;
 
     public AuthResponse() {}
 
@@ -43,6 +45,26 @@ public class AuthResponse {
         this.profileImageUrl = profileImageUrl;
         this.description = description;
         this.customId = customId;
+    }
+
+    public AuthResponse(
+            String token,
+            Long userId,
+            String email,
+            String name,
+            String profileImageUrl,
+            String description,
+            String customId,
+            String profileThemePreset
+    ) {
+        this.token = token;
+        this.userId = userId;
+        this.email = email;
+        this.name = name;
+        this.profileImageUrl = profileImageUrl;
+        this.description = description;
+        this.customId = customId;
+        this.profileThemePreset = profileThemePreset;
     }
 
     public String getToken() {
@@ -99,5 +121,21 @@ public class AuthResponse {
 
     public void setCustomId(String customId) {
         this.customId = customId;
+    }
+
+    public String getProfileThemePreset() {
+        return profileThemePreset;
+    }
+
+    public void setProfileThemePreset(String profileThemePreset) {
+        this.profileThemePreset = profileThemePreset;
+    }
+
+    public Object getProfileTheme() {
+        return profileTheme;
+    }
+
+    public void setProfileTheme(Object profileTheme) {
+        this.profileTheme = profileTheme;
     }
 }

@@ -40,6 +40,12 @@ public class User {
     @Column(name = "custom_id", unique = true, length = 50)
     private String customId;
 
+    @Column(name = "profile_theme_preset", length = 50)
+    private String profileThemePreset;
+
+    @Column(name = "profile_theme_json", length = 4000)
+    private String profileThemeJson;
+
     public User() {}
 
     public User(String email, String password, String name, Long createdAt, Long updatedAt) {
@@ -146,5 +152,21 @@ public class User {
 
     public void setCustomId(String customId) {
         this.customId = customId;
+    }
+
+    public String getProfileThemePreset() {
+        return profileThemePreset;
+    }
+
+    public void setProfileThemePreset(String profileThemePreset) {
+        this.profileThemePreset = profileThemePreset;
+    }
+
+    public String getProfileThemeJson() {
+        return profileThemeJson;
+    }
+
+    public void setProfileThemeJson(String profileThemeJson) {
+        this.profileThemeJson = profileThemeJson;
     }
 }
