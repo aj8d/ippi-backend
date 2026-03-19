@@ -46,6 +46,9 @@ public class User {
     @Column(name = "profile_theme_json", length = 4000)
     private String profileThemeJson;
 
+    @Column(name = "profile_background_url", length = 1000)
+    private String profileBackgroundUrl;
+
     public User() {}
 
     public User(String email, String password, String name, Long createdAt, Long updatedAt) {
@@ -168,5 +171,13 @@ public class User {
 
     public void setProfileThemeJson(String profileThemeJson) {
         this.profileThemeJson = profileThemeJson;
+    }
+
+    public String getProfileBackgroundUrl() {
+        return profileBackgroundUrl;
+    }
+
+    public void setProfileBackgroundUrl(String profileBackgroundUrl) {
+        this.profileBackgroundUrl = profileBackgroundUrl;
     }
 }

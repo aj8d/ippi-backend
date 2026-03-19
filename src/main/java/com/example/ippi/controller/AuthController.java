@@ -341,6 +341,10 @@ public class AuthController {
             if (updateData.getProfileTheme() != null) {
                 user.setProfileThemeJson(serializeProfileTheme(updateData.getProfileTheme()));
             }
+            if (updateData.getProfileBackgroundUrl() != null) {
+                String trimmedBackgroundUrl = updateData.getProfileBackgroundUrl().trim();
+                user.setProfileBackgroundUrl(trimmedBackgroundUrl.isEmpty() ? null : trimmedBackgroundUrl);
+            }
 
             if (user.getProfileThemeJson() == null || user.getProfileThemeJson().isBlank()) {
                 user.setProfileThemeJson(DEFAULT_PROFILE_THEME_JSON);
@@ -369,7 +373,58 @@ public class AuthController {
                 user.getProfileThemePreset()
         );
         response.setProfileTheme(parseStoredProfileTheme(user.getProfileThemeJson()));
+        response.setProfileBackgroundUrl(user.getProfileBackgroundUrl());
         return response;
+    }
+
+    @PostMapping("/upload-profile-background")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<?> uploadProfileBackground(
+            @RequestParam("file") MultipartFile file,
+            Principal principal) {
+        try {
+            String email = principal.getName();
+            User user = userRepository.findByEmail(email).orElse(null);
+
+            if (user == null) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body("ユーザーが見つかりません");
+            }
+
+            if (file.isEmpty()) {
+                return ResponseEntity.badRequest().body("ファイルが選択されていません");
+            }
+
+            if (file.getSize() > 8 * 1024 * 1024) {
+                return ResponseEntity.badRequest().body("ファイルサイズは8MB以下にしてください");
+            }
+
+            byte[] fileBytes = file.getBytes();
+
+            if (!FileValidationUtil.isValidImage(fileBytes)) {
+                return ResponseEntity.badRequest().body("有効な画像ファイルをアップロードしてください");
+            }
+
+            Map uploadResult = cloudinary.uploader().upload(fileBytes,
+                ObjectUtils.asMap(
+                    "folder", "ippi-profile-backgrounds",
+                    "public_id", "bg_user_" + user.getId(),
+                    "type", "private",
+                    "overwrite", true,
+                    "resource_type", "auto"
+                ));
+
+            String imageUrl = (String) uploadResult.get("secure_url");
+
+            user.setProfileBackgroundUrl(imageUrl);
+            user.setUpdatedAt(System.currentTimeMillis());
+            userRepository.save(user);
+
+            return ResponseEntity.ok(buildAuthResponse(null, user, user.getEmail()));
+        } catch (IOException e) {
+            logger.error("プロフィール背景画像アップロードエラー", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("背景画像アップロードに失敗しました");
+        }
     }
 
     private Map<String, Object> parseStoredProfileTheme(String rawJson) {

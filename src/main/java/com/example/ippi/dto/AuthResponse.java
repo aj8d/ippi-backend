@@ -10,6 +10,7 @@ public class AuthResponse {
     private String customId;
     private String profileThemePreset;
     private Object profileTheme;
+    private String profileBackgroundUrl;
 
     public AuthResponse() {}
 
@@ -137,5 +138,13 @@ public class AuthResponse {
 
     public void setProfileTheme(Object profileTheme) {
         this.profileTheme = profileTheme;
+    }
+
+    public String getProfileBackgroundUrl() {
+        return profileBackgroundUrl;
+    }
+
+    public void setProfileBackgroundUrl(String profileBackgroundUrl) {
+        this.profileBackgroundUrl = profileBackgroundUrl;
     }
 }
